@@ -715,6 +715,261 @@ const ForestManagementGIS = () => {
     );
   }
 
+  // Tree List View
+  const TreeListView = () => (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4 border-b bg-white">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">樹木一覧</h2>
+          <button
+            onClick={addNewTree}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新規登録
+          </button>
+        </div>
+        <div className="flex space-x-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="樹木を検索..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <Filter className="w-4 h-4 mr-2" />
+            フィルター
+          </button>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-200">
+        {trees.map(tree => (
+          <div
+            key={tree.id}
+            className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+            onClick={() => setSelectedTree(tree)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getHealthColor(tree.health)}`}>
+                  <Trees className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800">{tree.species}</h3>
+                  <p className="text-sm text-gray-600">直径: {tree.diameter}cm | 高さ: {tree.height}m</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getHealthColor(tree.health)}`}>
+                  {tree.health === 'healthy' && <CheckCircle className="w-3 h-3 mr-1" />}
+                  {tree.health === 'warning' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                  {tree.health === 'critical' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                  {tree.health}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">最終確認: {tree.last_check}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Analytics View
+  const AnalyticsView = () => (
+    <div className="h-full overflow-y-auto p-4 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">総樹木数</p>
+              <p className="text-2xl font-bold text-gray-900">{analyticsData?.total_trees || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Trees className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">健康な樹木</p>
+              <p className="text-2xl font-bold text-green-600">{analyticsData?.healthy_trees || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">要注意樹木</p>
+              <p className="text-2xl font-bold text-yellow-600">{analyticsData?.warning_trees || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">作業エリア状況</h3>
+        <div className="space-y-3">
+          {workAreas.map(area => (
+            <div key={area.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <h4 className="font-medium text-gray-800">{area.name}</h4>
+                <p className="text-sm text-gray-600">{area.tree_count || 0}本の樹木</p>
+              </div>
+              <div className="text-right">
+                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getStatusColor(area.status)}`}>
+                  {area.status}
+                </span>
+                <p className="text-xs text-gray-500 mt-1">最終訪問: {area.last_visit}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Data Management View
+  const DataManagementView = () => (
+    <div className="h-full overflow-y-auto p-4 space-y-6">
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800">データ管理</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => exportData('json')}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center"
+            >
+              <Database className="w-4 h-4 mr-2" />
+              JSON出力
+            </button>
+            <button
+              onClick={() => exportData('csv')}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              CSV出力
+            </button>
+            <button
+              onClick={() => generateReport('full')}
+              className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              PDF報告書
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-2">樹木データ</h3>
+            <p className="text-2xl font-bold text-green-600">{trees.length}件</p>
+            <p className="text-sm text-gray-600">登録樹木数</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-2">GPS追跡</h3>
+            <p className="text-2xl font-bold text-blue-600">{trackingPath.length}点</p>
+            <p className="text-sm text-gray-600">記録ポイント</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-2">測定記録</h3>
+            <p className="text-2xl font-bold text-purple-600">{measurements.length}件</p>
+            <p className="text-sm text-gray-600">距離測定</p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-2">ベクターレイヤー</h3>
+            <p className="text-2xl font-bold text-orange-600">{vectorLayers.length}層</p>
+            <p className="text-sm text-gray-600">GISレイヤー</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const tabs = [
+    { id: 'map', name: 'マップ', icon: MapPin, component: MapView },
+    { id: 'trees', name: '樹木', icon: Trees, component: TreeListView },
+    { id: 'analytics', name: '分析', icon: BarChart3, component: AnalyticsView },
+    { id: 'data', name: 'データ', icon: Database, component: DataManagementView }
+  ];
+
+  const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || MapView;
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
-      {/* Header - will continue in next part due to length limit */}
+      {/* Header */}
+      <header className="bg-green-600 text-white shadow-lg">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                <Trees className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">森林管理GIS</h1>
+                <p className="text-sm text-green-100">GPS追跡 & ベクターレイヤーシステム</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {isTracking && (
+                <div className="flex items-center space-x-2 bg-green-500 px-3 py-1 rounded-full">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">GPS追跡中</span>
+                </div>
+              )}
+              {isDrawing && (
+                <div className="flex items-center space-x-2 bg-orange-500 px-3 py-1 rounded-full">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">描画中</span>
+                </div>
+              )}
+              <button className="p-2 hover:bg-green-500 rounded-lg transition-colors">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <nav className="w-12 sm:w-16 bg-white shadow-lg">
+          <div className="p-1 sm:p-2 space-y-1 sm:space-y-2">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-green-100 text-green-600'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                }`}
+                title={tab.name}
+              >
+                <tab.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-hidden">
+          <ActiveComponent />
+        </main>
+      </div>
+    </div>
+  );
+};
