@@ -973,3 +973,5 @@ const ForestManagementGIS = () => {
     </div>
   );
 };
+
+export default ForestManagementGIS;
