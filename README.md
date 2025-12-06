@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 森林管理GISアプリケーション
 
 国土地理院地図APIを活用した包括的な森林管理システム
@@ -203,3 +204,57 @@ cd frontend && yarn start
 ## サポート
 
 バグ報告や機能要望は Issues にて受け付けています。
+=======
+# 森林管理 GIS アプリ
+
+山間部でのオフライン利用を想定した森林管理用モバイルアプリケーションです。
+
+## 概要
+
+本プロジェクトは **Supabase** をバックエンドに採用した **Flutter** モバイルアプリケーションです。電波の届かないエリアでも機能する「オフラインファースト」設計を採用しています。
+
+### 主な機能
+*   **オフラインファースト**: ローカルデータベース (Isar/SQLite) を使用し、通信回復時にバックグラウンドで Supabase と同期します。
+*   **地図表示**: `flutter_map` を使用し、OpenStreetMap または国土地理院地図を表示します。
+*   **GIS 機能**: PostGIS を活用して森林エリア (ポリゴン) や樹木の位置 (ポイント) を管理します。
+*   **クロスプラットフォーム**: Android と iOS に対応した単一のコードベースです。
+
+## 技術スタック
+
+### フロントエンド (モバイルアプリ)
+*   **フレームワーク**: Flutter (Dart)
+*   **状態管理**: Riverpod
+*   **地図ライブラリ**: flutter_map
+*   **ローカルデータベース**: Isar または SQLite (Drift)
+
+### バックエンド & データベース
+*   **プラットフォーム**: Supabase
+*   **データベース**: PostgreSQL
+*   **拡張機能**: PostGIS (空間データに必須)
+*   **認証**: Supabase Auth
+
+## プロジェクト構成 (提案)
+
+*   `lib/`: Flutter アプリケーションのメインコード
+    *   `features/`: 機能ごとの構成 (例: `map`, `trees`, `auth`)
+    *   `core/`: 共通ユーティリティや設定
+*   `supabase/`: Supabase の設定と SQL マイグレーションファイル
+
+## 始め方
+
+### 前提条件
+*   Flutter SDK
+*   Android Studio / Android Emulator (または実機)
+*   Supabase アカウント
+
+### セットアップ
+1.  リポジトリをクローンします。
+2.  依存関係をインストールします:
+    ```bash
+    flutter pub get
+    ```
+3.  アプリを実行します:
+    ```bash
+    flutter run
+    ```
+>>>>>>> f4efde9 (Initialize Flutter project, archive legacy RN code, add basic map feature)
