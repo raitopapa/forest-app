@@ -6,11 +6,10 @@ import 'app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // TODO: Replace with actual Supabase URL and Anon Key from environment or config
-  // await Supabase.initialize(
-  //   url: 'YOUR_SUPABASE_URL',
-  //   anonKey: 'YOUR_SUPABASE_ANON_KEY',
-  // );
+  await Supabase.initialize(
+    url: 'https://wyjyaydbchukvptlhcny.supabase.co',
+    anonKey: 'sb_publishable_smJpD_Febbex6fV9SO37Zw_0EYZtPxB',
+  );
 
   runApp(
     const ProviderScope(

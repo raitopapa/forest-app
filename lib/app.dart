@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'features/map/presentation/map_page.dart';
+import 'features/auth/presentation/auth_gate.dart';
 
 class ForestApp extends StatelessWidget {
   const ForestApp({super.key});
@@ -12,7 +12,7 @@ class ForestApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const MapPage(),
+      home: const AuthGate(),
     );
   }
 }
