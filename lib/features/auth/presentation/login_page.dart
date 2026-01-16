@@ -103,7 +103,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: const Text('スキップしてUI確認 (Debug)', style: TextStyle(color: Colors.grey)),
               ),
             ],
-          ),
         ),
       ),
     );

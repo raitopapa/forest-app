@@ -912,17 +912,537 @@ class LocalTreesCompanion extends UpdateCompanion<LocalTree> {
   }
 }
 
+class $LocalMapObjectsTable extends LocalMapObjects
+    with TableInfo<$LocalMapObjectsTable, LocalMapObject> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalMapObjectsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _geometryMeta =
+      const VerificationMeta('geometry');
+  @override
+  late final GeneratedColumn<String> geometry = GeneratedColumn<String>(
+      'geometry', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _workAreaIdMeta =
+      const VerificationMeta('workAreaId');
+  @override
+  late final GeneratedColumn<String> workAreaId = GeneratedColumn<String>(
+      'work_area_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES local_work_areas (id)'));
+  static const VerificationMeta _photoPathMeta =
+      const VerificationMeta('photoPath');
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+      'photo_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _attributesMeta =
+      const VerificationMeta('attributes');
+  @override
+  late final GeneratedColumn<String> attributes = GeneratedColumn<String>(
+      'attributes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('synced'));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        type,
+        geometry,
+        name,
+        description,
+        workAreaId,
+        photoPath,
+        attributes,
+        syncStatus,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_map_objects';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalMapObject> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('geometry')) {
+      context.handle(_geometryMeta,
+          geometry.isAcceptableOrUnknown(data['geometry']!, _geometryMeta));
+    } else if (isInserting) {
+      context.missing(_geometryMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('work_area_id')) {
+      context.handle(
+          _workAreaIdMeta,
+          workAreaId.isAcceptableOrUnknown(
+              data['work_area_id']!, _workAreaIdMeta));
+    } else if (isInserting) {
+      context.missing(_workAreaIdMeta);
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(_photoPathMeta,
+          photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
+    }
+    if (data.containsKey('attributes')) {
+      context.handle(
+          _attributesMeta,
+          attributes.isAcceptableOrUnknown(
+              data['attributes']!, _attributesMeta));
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalMapObject map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalMapObject(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      geometry: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}geometry'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name']),
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
+      workAreaId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}work_area_id'])!,
+      photoPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo_path']),
+      attributes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}attributes']),
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $LocalMapObjectsTable createAlias(String alias) {
+    return $LocalMapObjectsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalMapObject extends DataClass implements Insertable<LocalMapObject> {
+  final String id;
+  final String type;
+  final String geometry;
+  final String? name;
+  final String? description;
+  final String workAreaId;
+  final String? photoPath;
+  final String? attributes;
+  final String syncStatus;
+  final DateTime updatedAt;
+  const LocalMapObject(
+      {required this.id,
+      required this.type,
+      required this.geometry,
+      this.name,
+      this.description,
+      required this.workAreaId,
+      this.photoPath,
+      this.attributes,
+      required this.syncStatus,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['type'] = Variable<String>(type);
+    map['geometry'] = Variable<String>(geometry);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['work_area_id'] = Variable<String>(workAreaId);
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
+    if (!nullToAbsent || attributes != null) {
+      map['attributes'] = Variable<String>(attributes);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LocalMapObjectsCompanion toCompanion(bool nullToAbsent) {
+    return LocalMapObjectsCompanion(
+      id: Value(id),
+      type: Value(type),
+      geometry: Value(geometry),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      workAreaId: Value(workAreaId),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
+      attributes: attributes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(attributes),
+      syncStatus: Value(syncStatus),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LocalMapObject.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalMapObject(
+      id: serializer.fromJson<String>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      geometry: serializer.fromJson<String>(json['geometry']),
+      name: serializer.fromJson<String?>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      workAreaId: serializer.fromJson<String>(json['workAreaId']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
+      attributes: serializer.fromJson<String?>(json['attributes']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'type': serializer.toJson<String>(type),
+      'geometry': serializer.toJson<String>(geometry),
+      'name': serializer.toJson<String?>(name),
+      'description': serializer.toJson<String?>(description),
+      'workAreaId': serializer.toJson<String>(workAreaId),
+      'photoPath': serializer.toJson<String?>(photoPath),
+      'attributes': serializer.toJson<String?>(attributes),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LocalMapObject copyWith(
+          {String? id,
+          String? type,
+          String? geometry,
+          Value<String?> name = const Value.absent(),
+          Value<String?> description = const Value.absent(),
+          String? workAreaId,
+          Value<String?> photoPath = const Value.absent(),
+          Value<String?> attributes = const Value.absent(),
+          String? syncStatus,
+          DateTime? updatedAt}) =>
+      LocalMapObject(
+        id: id ?? this.id,
+        type: type ?? this.type,
+        geometry: geometry ?? this.geometry,
+        name: name.present ? name.value : this.name,
+        description: description.present ? description.value : this.description,
+        workAreaId: workAreaId ?? this.workAreaId,
+        photoPath: photoPath.present ? photoPath.value : this.photoPath,
+        attributes: attributes.present ? attributes.value : this.attributes,
+        syncStatus: syncStatus ?? this.syncStatus,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  LocalMapObject copyWithCompanion(LocalMapObjectsCompanion data) {
+    return LocalMapObject(
+      id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
+      geometry: data.geometry.present ? data.geometry.value : this.geometry,
+      name: data.name.present ? data.name.value : this.name,
+      description:
+          data.description.present ? data.description.value : this.description,
+      workAreaId:
+          data.workAreaId.present ? data.workAreaId.value : this.workAreaId,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      attributes:
+          data.attributes.present ? data.attributes.value : this.attributes,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMapObject(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('geometry: $geometry, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('workAreaId: $workAreaId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('attributes: $attributes, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, type, geometry, name, description,
+      workAreaId, photoPath, attributes, syncStatus, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalMapObject &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.geometry == this.geometry &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.workAreaId == this.workAreaId &&
+          other.photoPath == this.photoPath &&
+          other.attributes == this.attributes &&
+          other.syncStatus == this.syncStatus &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalMapObjectsCompanion extends UpdateCompanion<LocalMapObject> {
+  final Value<String> id;
+  final Value<String> type;
+  final Value<String> geometry;
+  final Value<String?> name;
+  final Value<String?> description;
+  final Value<String> workAreaId;
+  final Value<String?> photoPath;
+  final Value<String?> attributes;
+  final Value<String> syncStatus;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const LocalMapObjectsCompanion({
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.geometry = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.workAreaId = const Value.absent(),
+    this.photoPath = const Value.absent(),
+    this.attributes = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalMapObjectsCompanion.insert({
+    required String id,
+    required String type,
+    required String geometry,
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    required String workAreaId,
+    this.photoPath = const Value.absent(),
+    this.attributes = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        type = Value(type),
+        geometry = Value(geometry),
+        workAreaId = Value(workAreaId);
+  static Insertable<LocalMapObject> custom({
+    Expression<String>? id,
+    Expression<String>? type,
+    Expression<String>? geometry,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<String>? workAreaId,
+    Expression<String>? photoPath,
+    Expression<String>? attributes,
+    Expression<String>? syncStatus,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (geometry != null) 'geometry': geometry,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (workAreaId != null) 'work_area_id': workAreaId,
+      if (photoPath != null) 'photo_path': photoPath,
+      if (attributes != null) 'attributes': attributes,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalMapObjectsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? type,
+      Value<String>? geometry,
+      Value<String?>? name,
+      Value<String?>? description,
+      Value<String>? workAreaId,
+      Value<String?>? photoPath,
+      Value<String?>? attributes,
+      Value<String>? syncStatus,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return LocalMapObjectsCompanion(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      geometry: geometry ?? this.geometry,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      workAreaId: workAreaId ?? this.workAreaId,
+      photoPath: photoPath ?? this.photoPath,
+      attributes: attributes ?? this.attributes,
+      syncStatus: syncStatus ?? this.syncStatus,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (geometry.present) {
+      map['geometry'] = Variable<String>(geometry.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (workAreaId.present) {
+      map['work_area_id'] = Variable<String>(workAreaId.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
+    if (attributes.present) {
+      map['attributes'] = Variable<String>(attributes.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalMapObjectsCompanion(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('geometry: $geometry, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('workAreaId: $workAreaId, ')
+          ..write('photoPath: $photoPath, ')
+          ..write('attributes: $attributes, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $LocalWorkAreasTable localWorkAreas = $LocalWorkAreasTable(this);
   late final $LocalTreesTable localTrees = $LocalTreesTable(this);
+  late final $LocalMapObjectsTable localMapObjects =
+      $LocalMapObjectsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [localWorkAreas, localTrees];
+      [localWorkAreas, localTrees, localMapObjects];
 }
 
 typedef $$LocalWorkAreasTableCreateCompanionBuilder = LocalWorkAreasCompanion
@@ -962,6 +1482,23 @@ final class $$LocalWorkAreasTableReferences
         .filter((f) => f.workAreaId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_localTreesRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$LocalMapObjectsTable, List<LocalMapObject>>
+      _localMapObjectsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.localMapObjects,
+              aliasName: $_aliasNameGenerator(
+                  db.localWorkAreas.id, db.localMapObjects.workAreaId));
+
+  $$LocalMapObjectsTableProcessedTableManager get localMapObjectsRefs {
+    final manager = $$LocalMapObjectsTableTableManager(
+            $_db, $_db.localMapObjects)
+        .filter((f) => f.workAreaId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_localMapObjectsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -1007,6 +1544,27 @@ class $$LocalWorkAreasTableFilterComposer
             $$LocalTreesTableFilterComposer(
               $db: $db,
               $table: $db.localTrees,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> localMapObjectsRefs(
+      Expression<bool> Function($$LocalMapObjectsTableFilterComposer f) f) {
+    final $$LocalMapObjectsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.localMapObjects,
+        getReferencedColumn: (t) => t.workAreaId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalMapObjectsTableFilterComposer(
+              $db: $db,
+              $table: $db.localMapObjects,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -1091,6 +1649,27 @@ class $$LocalWorkAreasTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> localMapObjectsRefs<T extends Object>(
+      Expression<T> Function($$LocalMapObjectsTableAnnotationComposer a) f) {
+    final $$LocalMapObjectsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.localMapObjects,
+        getReferencedColumn: (t) => t.workAreaId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalMapObjectsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localMapObjects,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$LocalWorkAreasTableTableManager extends RootTableManager<
@@ -1104,7 +1683,7 @@ class $$LocalWorkAreasTableTableManager extends RootTableManager<
     $$LocalWorkAreasTableUpdateCompanionBuilder,
     (LocalWorkArea, $$LocalWorkAreasTableReferences),
     LocalWorkArea,
-    PrefetchHooks Function({bool localTreesRefs})> {
+    PrefetchHooks Function({bool localTreesRefs, bool localMapObjectsRefs})> {
   $$LocalWorkAreasTableTableManager(
       _$AppDatabase db, $LocalWorkAreasTable table)
       : super(TableManagerState(
@@ -1158,10 +1737,14 @@ class $$LocalWorkAreasTableTableManager extends RootTableManager<
                     $$LocalWorkAreasTableReferences(db, table, e)
                   ))
               .toList(),
-          prefetchHooksCallback: ({localTreesRefs = false}) {
+          prefetchHooksCallback: (
+              {localTreesRefs = false, localMapObjectsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (localTreesRefs) db.localTrees],
+              explicitlyWatchedTables: [
+                if (localTreesRefs) db.localTrees,
+                if (localMapObjectsRefs) db.localMapObjects
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -1174,6 +1757,19 @@ class $$LocalWorkAreasTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$LocalWorkAreasTableReferences(db, table, p0)
                                 .localTreesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.workAreaId == item.id),
+                        typedResults: items),
+                  if (localMapObjectsRefs)
+                    await $_getPrefetchedData<LocalWorkArea,
+                            $LocalWorkAreasTable, LocalMapObject>(
+                        currentTable: table,
+                        referencedTable: $$LocalWorkAreasTableReferences
+                            ._localMapObjectsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$LocalWorkAreasTableReferences(db, table, p0)
+                                .localMapObjectsRefs,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.workAreaId == item.id),
@@ -1196,7 +1792,7 @@ typedef $$LocalWorkAreasTableProcessedTableManager = ProcessedTableManager<
     $$LocalWorkAreasTableUpdateCompanionBuilder,
     (LocalWorkArea, $$LocalWorkAreasTableReferences),
     LocalWorkArea,
-    PrefetchHooks Function({bool localTreesRefs})>;
+    PrefetchHooks Function({bool localTreesRefs, bool localMapObjectsRefs})>;
 typedef $$LocalTreesTableCreateCompanionBuilder = LocalTreesCompanion Function({
   required String id,
   required String species,
@@ -1561,6 +2157,359 @@ typedef $$LocalTreesTableProcessedTableManager = ProcessedTableManager<
     (LocalTree, $$LocalTreesTableReferences),
     LocalTree,
     PrefetchHooks Function({bool workAreaId})>;
+typedef $$LocalMapObjectsTableCreateCompanionBuilder = LocalMapObjectsCompanion
+    Function({
+  required String id,
+  required String type,
+  required String geometry,
+  Value<String?> name,
+  Value<String?> description,
+  required String workAreaId,
+  Value<String?> photoPath,
+  Value<String?> attributes,
+  Value<String> syncStatus,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+typedef $$LocalMapObjectsTableUpdateCompanionBuilder = LocalMapObjectsCompanion
+    Function({
+  Value<String> id,
+  Value<String> type,
+  Value<String> geometry,
+  Value<String?> name,
+  Value<String?> description,
+  Value<String> workAreaId,
+  Value<String?> photoPath,
+  Value<String?> attributes,
+  Value<String> syncStatus,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+final class $$LocalMapObjectsTableReferences extends BaseReferences<
+    _$AppDatabase, $LocalMapObjectsTable, LocalMapObject> {
+  $$LocalMapObjectsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $LocalWorkAreasTable _workAreaIdTable(_$AppDatabase db) =>
+      db.localWorkAreas.createAlias($_aliasNameGenerator(
+          db.localMapObjects.workAreaId, db.localWorkAreas.id));
+
+  $$LocalWorkAreasTableProcessedTableManager get workAreaId {
+    final $_column = $_itemColumn<String>('work_area_id')!;
+
+    final manager = $$LocalWorkAreasTableTableManager($_db, $_db.localWorkAreas)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_workAreaIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$LocalMapObjectsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalMapObjectsTable> {
+  $$LocalMapObjectsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get geometry => $composableBuilder(
+      column: $table.geometry, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get attributes => $composableBuilder(
+      column: $table.attributes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  $$LocalWorkAreasTableFilterComposer get workAreaId {
+    final $$LocalWorkAreasTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.workAreaId,
+        referencedTable: $db.localWorkAreas,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalWorkAreasTableFilterComposer(
+              $db: $db,
+              $table: $db.localWorkAreas,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LocalMapObjectsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalMapObjectsTable> {
+  $$LocalMapObjectsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get geometry => $composableBuilder(
+      column: $table.geometry, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get attributes => $composableBuilder(
+      column: $table.attributes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  $$LocalWorkAreasTableOrderingComposer get workAreaId {
+    final $$LocalWorkAreasTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.workAreaId,
+        referencedTable: $db.localWorkAreas,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalWorkAreasTableOrderingComposer(
+              $db: $db,
+              $table: $db.localWorkAreas,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LocalMapObjectsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalMapObjectsTable> {
+  $$LocalMapObjectsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get geometry =>
+      $composableBuilder(column: $table.geometry, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
+  GeneratedColumn<String> get attributes => $composableBuilder(
+      column: $table.attributes, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$LocalWorkAreasTableAnnotationComposer get workAreaId {
+    final $$LocalWorkAreasTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.workAreaId,
+        referencedTable: $db.localWorkAreas,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$LocalWorkAreasTableAnnotationComposer(
+              $db: $db,
+              $table: $db.localWorkAreas,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$LocalMapObjectsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalMapObjectsTable,
+    LocalMapObject,
+    $$LocalMapObjectsTableFilterComposer,
+    $$LocalMapObjectsTableOrderingComposer,
+    $$LocalMapObjectsTableAnnotationComposer,
+    $$LocalMapObjectsTableCreateCompanionBuilder,
+    $$LocalMapObjectsTableUpdateCompanionBuilder,
+    (LocalMapObject, $$LocalMapObjectsTableReferences),
+    LocalMapObject,
+    PrefetchHooks Function({bool workAreaId})> {
+  $$LocalMapObjectsTableTableManager(
+      _$AppDatabase db, $LocalMapObjectsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalMapObjectsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalMapObjectsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalMapObjectsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> type = const Value.absent(),
+            Value<String> geometry = const Value.absent(),
+            Value<String?> name = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<String> workAreaId = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
+            Value<String?> attributes = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalMapObjectsCompanion(
+            id: id,
+            type: type,
+            geometry: geometry,
+            name: name,
+            description: description,
+            workAreaId: workAreaId,
+            photoPath: photoPath,
+            attributes: attributes,
+            syncStatus: syncStatus,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String type,
+            required String geometry,
+            Value<String?> name = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            required String workAreaId,
+            Value<String?> photoPath = const Value.absent(),
+            Value<String?> attributes = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              LocalMapObjectsCompanion.insert(
+            id: id,
+            type: type,
+            geometry: geometry,
+            name: name,
+            description: description,
+            workAreaId: workAreaId,
+            photoPath: photoPath,
+            attributes: attributes,
+            syncStatus: syncStatus,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$LocalMapObjectsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({workAreaId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (workAreaId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.workAreaId,
+                    referencedTable:
+                        $$LocalMapObjectsTableReferences._workAreaIdTable(db),
+                    referencedColumn: $$LocalMapObjectsTableReferences
+                        ._workAreaIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$LocalMapObjectsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalMapObjectsTable,
+    LocalMapObject,
+    $$LocalMapObjectsTableFilterComposer,
+    $$LocalMapObjectsTableOrderingComposer,
+    $$LocalMapObjectsTableAnnotationComposer,
+    $$LocalMapObjectsTableCreateCompanionBuilder,
+    $$LocalMapObjectsTableUpdateCompanionBuilder,
+    (LocalMapObject, $$LocalMapObjectsTableReferences),
+    LocalMapObject,
+    PrefetchHooks Function({bool workAreaId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1569,4 +2518,6 @@ class $AppDatabaseManager {
       $$LocalWorkAreasTableTableManager(_db, _db.localWorkAreas);
   $$LocalTreesTableTableManager get localTrees =>
       $$LocalTreesTableTableManager(_db, _db.localTrees);
+  $$LocalMapObjectsTableTableManager get localMapObjects =>
+      $$LocalMapObjectsTableTableManager(_db, _db.localMapObjects);
 }

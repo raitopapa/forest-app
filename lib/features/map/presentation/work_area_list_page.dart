@@ -4,6 +4,7 @@ import '../../auth/data/auth_repository.dart';
 import '../data/work_area_repository.dart';
 import 'work_area_create_page.dart';
 import 'map_page.dart';
+import '../../backup/presentation/backup_settings_page.dart';
 
 import '../../offline/data/sync_repository.dart';
 
@@ -41,6 +42,14 @@ class _WorkAreaListPageState extends ConsumerState<WorkAreaListPage> {
       appBar: AppBar(
         title: const Text('作業エリア一覧'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.backup),
+            tooltip: 'バックアップ設定',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const BackupSettingsPage()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.sync),
             onPressed: () async {

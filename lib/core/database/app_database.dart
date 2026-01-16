@@ -32,14 +32,44 @@ class LocalTrees extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [LocalWorkAreas, LocalTrees])
+class LocalMapObjects extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get type => text()(); // point, line
+  TextColumn get geometry => text()(); // WKT
+  TextColumn get name => text().nullable()();
+  TextColumn get description => text().nullable()();
+  TextColumn get workAreaId => text().references(LocalWorkAreas, #id)();
+  TextColumn get photoPath => text().nullable()(); // Path to local photo file
+  TextColumn get attributes => text().nullable()(); // JSON string for custom attributes
+  TextColumn get syncStatus => text().withDefault(const Constant('synced'))();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [LocalWorkAreas, LocalTrees, LocalMapObjects])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(localMapObjects);
+          }
+          if (from < 3) {
+            await m.addColumn(localMapObjects, localMapObjects.photoPath);
+            await m.addColumn(localMapObjects, localMapObjects.attributes);
+          }
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'forest_app_db');
   }
 }
+

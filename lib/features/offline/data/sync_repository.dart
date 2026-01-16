@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../../../core/database/app_database.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -16,11 +18,76 @@ final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   );
 });
 
+/// Represents a sync conflict that was detected.
+class SyncConflict {
+  final String entityType; // 'work_area', 'tree', 'map_object'
+  final String entityId;
+  final DateTime localUpdatedAt;
+  final DateTime remoteUpdatedAt;
+  final String resolution; // 'local_kept', 'remote_accepted'
+  final DateTime detectedAt;
+
+  SyncConflict({
+    required this.entityType,
+    required this.entityId,
+    required this.localUpdatedAt,
+    required this.remoteUpdatedAt,
+    required this.resolution,
+    required this.detectedAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'entityType': entityType,
+    'entityId': entityId,
+    'localUpdatedAt': localUpdatedAt.toIso8601String(),
+    'remoteUpdatedAt': remoteUpdatedAt.toIso8601String(),
+    'resolution': resolution,
+    'detectedAt': detectedAt.toIso8601String(),
+  };
+
+  factory SyncConflict.fromJson(Map<String, dynamic> json) => SyncConflict(
+    entityType: json['entityType'],
+    entityId: json['entityId'],
+    localUpdatedAt: DateTime.parse(json['localUpdatedAt']),
+    remoteUpdatedAt: DateTime.parse(json['remoteUpdatedAt']),
+    resolution: json['resolution'],
+    detectedAt: DateTime.parse(json['detectedAt']),
+  );
+}
+
 class SyncRepository {
   final SupabaseClient _supabase;
   final AppDatabase _db;
+  static const String _conflictsKey = 'sync_conflicts';
 
   SyncRepository(this._supabase, this._db);
+
+  /// Get logged conflicts.
+  Future<List<SyncConflict>> getConflicts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString(_conflictsKey);
+    if (json == null) return [];
+    final list = jsonDecode(json) as List;
+    return list.map((e) => SyncConflict.fromJson(e)).toList();
+  }
+
+  /// Clear conflict log.
+  Future<void> clearConflicts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_conflictsKey);
+  }
+
+  /// Log a conflict.
+  Future<void> _logConflict(SyncConflict conflict) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = await getConflicts();
+    existing.add(conflict);
+    // Keep only last 50 conflicts
+    if (existing.length > 50) {
+      existing.removeRange(0, existing.length - 50);
+    }
+    await prefs.setString(_conflictsKey, jsonEncode(existing.map((e) => e.toJson()).toList()));
+  }
 
   Future<void> syncPull() async {
     final userId = _supabase.auth.currentUser?.id;
