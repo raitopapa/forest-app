@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../domain/models/map_object.dart';
+import '../../domain/models/map_object.dart';
 
 /// Summary dashboard showing statistics for the current work area.
 class SummaryDashboard extends StatelessWidget {

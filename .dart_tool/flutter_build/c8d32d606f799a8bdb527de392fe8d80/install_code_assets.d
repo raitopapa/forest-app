@@ -1,0 +1,1 @@
+ C:\\Users\\i0079\\forest-app\\forest-app\\.dart_tool\\flutter_build\\c8d32d606f799a8bdb527de392fe8d80\\native_assets.json: 
