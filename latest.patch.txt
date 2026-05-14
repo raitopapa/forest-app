@@ -1,0 +1,125 @@
+diff --git a/HANDOVER.md b/HANDOVER.md
+index cf2c706..56c1769 100644
+--- a/HANDOVER.md
++++ b/HANDOVER.md
+@@ -30,6 +30,7 @@
+   - 調査テンプレート + 必須入力バリデーション。
+ - ダッシュボード
+   - 未同期/再送キュー/面積/最終同期/本日更新/直近7日/直近30日更新を表示。
++  - 樹種内訳はMapPage側で集計して受け渡し、表示責務を分離。
+
+ ---
+ 
+diff --git a/lib/features/map/presentation/map_page.dart b/lib/features/map/presentation/map_page.dart
+index dddc869..7a56c61 100644
+--- a/lib/features/map/presentation/map_page.dart
++++ b/lib/features/map/presentation/map_page.dart
+@@ -1067,6 +1067,16 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
+     return mapObjectCount + treeCount;
+   }
+
++  Map<String, int> _buildSpeciesCount() {
++    final counts = <String, int>{};
++    for (final tree in _trees) {
++      final species = (tree['species'] as String?)?.trim();
++      final key = (species == null || species.isEmpty) ? '不明' : species;
++      counts[key] = (counts[key] ?? 0) + 1;
++    }
++    return counts;
++  }
++
+   void _openSummaryDashboard() {
+     showSummaryDashboard(
+       context,
+@@ -1081,6 +1091,7 @@ class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
+       todayUpdatedCount: _calculateTodayUpdatedCount(),
+       weekUpdatedCount: _calculateUpdatedCountInDays(7),
+       monthUpdatedCount: _calculateUpdatedCountInDays(30),
++      speciesCount: _buildSpeciesCount(),
+     );
+   }
+ 
+diff --git a/lib/features/map/presentation/widgets/summary_dashboard.dart b/lib/features/map/presentation/widgets/summary_dashboard.dart
+index f9d03eb..ea138bd 100644
+--- a/lib/features/map/presentation/widgets/summary_dashboard.dart
++++ b/lib/features/map/presentation/widgets/summary_dashboard.dart
+@@ -14,6 +14,7 @@ class SummaryDashboard extends StatelessWidget {
+   final int todayUpdatedCount;
+   final int weekUpdatedCount;
+   final int monthUpdatedCount;
++  final Map<String, int>? speciesCount;
+
+   const SummaryDashboard({
+     super.key,
+@@ -28,6 +29,7 @@ class SummaryDashboard extends StatelessWidget {
+     this.todayUpdatedCount = 0,
+     this.weekUpdatedCount = 0,
+     this.monthUpdatedCount = 0,
++    this.speciesCount,
+   });
+
+   @override
+@@ -35,8 +37,9 @@ class SummaryDashboard extends StatelessWidget {
+     final pointCount = mapObjects.where((o) => o.type == MapObjectType.point).length;
+     final lineCount = mapObjects.where((o) => o.type == MapObjectType.line).length;
+     final polygonCount = mapObjects.where((o) => o.type == MapObjectType.polygon).length;
+-    final photoCount = mapObjects.where((o) => o.photoPath != null).length + 
+-                       trees.where((t) => t['photo_path'] != null || t['photo_url'] != null).length;
++    final photoCount = mapObjects.where((o) => o.photoPath != null).length +
++        trees.where((t) => t['photo_path'] != null || t['photo_url'] != null).length;
++    final speciesData = speciesCount ?? _buildSpeciesCountFromTrees();
+
+     return Container(
+       margin: const EdgeInsets.all(16),
+@@ -177,7 +180,7 @@ class SummaryDashboard extends StatelessWidget {
+           const SizedBox(height: 16),
+
+           // Species breakdown
+-          if (trees.isNotEmpty) ...[
++          if (speciesData.isNotEmpty) ...[
+             const Divider(),
+             const SizedBox(height: 8),
+             const Align(
+@@ -185,7 +188,7 @@ class SummaryDashboard extends StatelessWidget {
+               child: Text('樹種内訳', style: TextStyle(fontWeight: FontWeight.bold)),
+             ),
+             const SizedBox(height: 8),
+-            _buildSpeciesBreakdown(),
++            _buildSpeciesBreakdown(speciesData),
+           ],
+         ],
+       ),
+@@ -219,13 +222,16 @@ class SummaryDashboard extends StatelessWidget {
+         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+   }
+
+-  Widget _buildSpeciesBreakdown() {
++  Map<String, int> _buildSpeciesCountFromTrees() {
+     final speciesCount = <String, int>{};
+     for (final tree in trees) {
+       final species = tree['species'] as String? ?? '不明';
+       speciesCount[species] = (speciesCount[species] ?? 0) + 1;
+     }
++    return speciesCount;
++  }
+
++  Widget _buildSpeciesBreakdown(Map<String, int> speciesCount) {
+     final sortedSpecies = speciesCount.entries.toList()
+       ..sort((a, b) => b.value.compareTo(a.value));
+
+@@ -257,6 +263,7 @@ void showSummaryDashboard(
+   int todayUpdatedCount = 0,
+   int weekUpdatedCount = 0,
+   int monthUpdatedCount = 0,
++  Map<String, int>? speciesCount,
+ }) {
+   showModalBottomSheet(
+     context: context,
+@@ -273,6 +280,7 @@ void showSummaryDashboard(
+       todayUpdatedCount: todayUpdatedCount,
+       weekUpdatedCount: weekUpdatedCount,
+       monthUpdatedCount: monthUpdatedCount,
++      speciesCount: speciesCount,
+     ),
+   );
+ }
