@@ -15,6 +15,9 @@ import 'widgets/map_drawing_toolbar.dart';
 import '../../export/services/export_service.dart';
 import '../domain/services/measurement_service.dart';
 import '../domain/services/track_recorder_service.dart';
+import '../domain/services/offline_map_cache_service.dart';
+import '../../offline/data/sync_repository.dart';
+import '../../offline/presentation/sync_status_page.dart';
 import 'photo_gallery_page.dart';
 import 'widgets/attribute_editor_dialog.dart';
 import 'widgets/summary_dashboard.dart';
@@ -29,7 +32,7 @@ class MapPage extends ConsumerStatefulWidget {
   ConsumerState<MapPage> createState() => _MapPageState();
 }
 
-class _MapPageState extends ConsumerState<MapPage> {
+class _MapPageState extends ConsumerState<MapPage> with WidgetsBindingObserver {
   late final MapController _mapController;
   final _picker = ImagePicker();
   final _mapKey = GlobalKey(); // For map screenshot
@@ -58,14 +61,33 @@ class _MapPageState extends ConsumerState<MapPage> {
   LatLng? _currentLocation;
   bool _isFollowMode = false;
   StreamSubscription<Position>? _locationSubscription;
+  TrackingMode _trackingMode = TrackingMode.balanced;
+  OfflineMapCacheInfo? _cacheInfo;
+  OfflineTileCacheStats? _cacheStats;
+  double? _cacheCompletionRatio;
+  SyncOverview? _syncOverview;
+  DateTime? _lastSyncAt;
+  String? _lastSyncError;
+  Timer? _syncRefreshTimer;
+  bool _preferOfflineTiles = false;
+  String? _offlineTileBasePath;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _mapController = MapController();
     _refreshData();
+    _loadCacheInfo();
+    _loadCacheStats();
+    _loadSyncOverview();
     // Setup GPS Listener
     final trackService = ref.read(trackRecorderServiceProvider);
+    trackService.ensureInitialized().then((_) {
+      if (mounted) {
+        setState(() => _trackingMode = trackService.trackingMode);
+      }
+    });
     _trackSubscription = trackService.trackStream.listen((track) {
       if (mounted) {
         setState(() {
@@ -73,12 +95,32 @@ class _MapPageState extends ConsumerState<MapPage> {
         });
       }
     });
+    _syncRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _loadSyncOverview(),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _syncRefreshTimer?.cancel();
+      _syncRefreshTimer = null;
+    } else if (state == AppLifecycleState.resumed) {
+      _loadSyncOverview();
+      _syncRefreshTimer ??= Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => _loadSyncOverview(),
+      );
+    }
   }
 
   @override
   void dispose() {
     _trackSubscription?.cancel();
     _locationSubscription?.cancel();
+    _syncRefreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -127,11 +169,9 @@ class _MapPageState extends ConsumerState<MapPage> {
   }
 
   void _startLocationUpdates() {
+    final settings = _locationSettingsForFollowMode();
     _locationSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // Update every 5 meters
-      ),
+      locationSettings: settings,
     ).listen((position) {
       final latLng = LatLng(position.latitude, position.longitude);
       if (mounted) {
@@ -143,9 +183,249 @@ class _MapPageState extends ConsumerState<MapPage> {
     });
   }
 
+
+  LocationSettings _locationSettingsForFollowMode() {
+    return TrackRecorderService.locationSettingsForMode(_trackingMode);
+  }
+
+  String _trackingModeLabel(TrackingMode mode) {
+    switch (mode) {
+      case TrackingMode.highAccuracy:
+        return '高精度';
+      case TrackingMode.batterySaver:
+        return '省電力';
+      case TrackingMode.balanced:
+        return '標準';
+    }
+  }
+
+  Future<void> _updateTrackingMode(TrackingMode mode) async {
+    final service = ref.read(trackRecorderServiceProvider);
+    await service.setTrackingMode(mode);
+    setState(() => _trackingMode = mode);
+
+    if (_isFollowMode) {
+      _stopLocationUpdates();
+      _startLocationUpdates();
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('位置更新モード: ${_trackingModeLabel(mode)}')),
+      );
+    }
+  }
+
   void _stopLocationUpdates() {
     _locationSubscription?.cancel();
     _locationSubscription = null;
+  }
+
+
+  Future<void> _loadCacheInfo() async {
+    final service = ref.read(offlineMapCacheServiceProvider);
+    final info = await service.getCacheInfo(widget.workAreaId);
+    final hasCache = await service.hasTileCache(widget.workAreaId);
+    final basePath = hasCache
+        ? await service.getExistingCacheDirectoryPath(widget.workAreaId)
+        : null;
+    if (mounted) {
+      setState(() {
+        _cacheInfo = info;
+        _preferOfflineTiles = hasCache;
+        _offlineTileBasePath = basePath;
+      });
+    }
+  }
+
+  Future<void> _loadCacheStats() async {
+    final service = ref.read(offlineMapCacheServiceProvider);
+    final stats = await service.getTileCacheStats(widget.workAreaId);
+    final completion = await service.getCacheCompletionRatio(widget.workAreaId);
+    if (!mounted) return;
+    setState(() {
+      _cacheStats = stats;
+      _cacheCompletionRatio = completion;
+    });
+  }
+
+  Future<void> _initializeOfflineTileMode() async {
+    final service = ref.read(offlineMapCacheServiceProvider);
+    final hasCache = await service.hasTileCache(widget.workAreaId);
+    final basePath = hasCache
+        ? await service.getCacheDirectoryPath(widget.workAreaId)
+        : null;
+    if (!mounted) return;
+    setState(() {
+      _preferOfflineTiles = hasCache;
+      _offlineTileBasePath = basePath;
+    });
+  }
+
+  Future<void> _loadSyncOverview() async {
+    final repo = ref.read(syncRepositoryProvider);
+    final overview = await repo.getSyncOverview();
+    final lastSyncAt = await repo.getLastSyncTime();
+    final lastSyncError = await repo.getLastSyncError();
+    if (mounted) {
+      setState(() {
+        _syncOverview = overview;
+        _lastSyncAt = lastSyncAt;
+        _lastSyncError = lastSyncError;
+      });
+    }
+  }
+
+  Future<void> _showOfflineCacheDialog() async {
+    int minZoom = _cacheInfo?.minZoom ?? 14;
+    int maxZoom = _cacheInfo?.maxZoom ?? 17;
+    bool isDownloading = false;
+    int downloadProcessed = 0;
+    int downloadTotal = 0;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('オフライン地図キャッシュ'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_cacheInfo != null)
+                Text('保存済み: z${_cacheInfo!.minZoom}〜z${_cacheInfo!.maxZoom} / ${_cacheInfo!.estimatedSizeLabel}'),
+              if (_cacheStats != null)
+                Text('実キャッシュ: ${_cacheStats!.fileCount} tiles / ${_cacheStats!.totalSizeLabel}'),
+              if (_cacheCompletionRatio != null)
+                Text('完了率: ${(_cacheCompletionRatio! * 100).toStringAsFixed(1)}%'),
+              const SizedBox(height: 8),
+              Text('最小ズーム: $minZoom'),
+              Slider(
+                min: 10,
+                max: 18,
+                divisions: 8,
+                value: minZoom.toDouble(),
+                onChanged: (v) => setDialogState(() {
+                  minZoom = v.toInt();
+                  if (maxZoom < minZoom) maxZoom = minZoom;
+                }),
+              ),
+              Text('最大ズーム: $maxZoom'),
+              Slider(
+                min: minZoom.toDouble(),
+                max: 20,
+                divisions: 20 - minZoom,
+                value: maxZoom.toDouble().clamp(minZoom.toDouble(), 20),
+                onChanged: (v) => setDialogState(() => maxZoom = v.toInt()),
+              ),
+              if (isDownloading) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: downloadTotal > 0 ? downloadProcessed / downloadTotal : null,
+                ),
+                const SizedBox(height: 4),
+                Text('ダウンロード中: $downloadProcessed / $downloadTotal タイル'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる')),
+            if (_cacheInfo != null)
+              TextButton(
+                onPressed: () async {
+                  final cacheService = ref.read(offlineMapCacheServiceProvider);
+                  await cacheService.clearCachePlan(widget.workAreaId);
+                  await cacheService.clearTileCache(widget.workAreaId);
+                  if (mounted) {
+                    setState(() {
+                      _preferOfflineTiles = false;
+                      _offlineTileBasePath = null;
+                    });
+                    Navigator.pop(context);
+                    _loadCacheInfo();
+                    _loadCacheStats();
+                    _initializeOfflineTileMode();
+                  }
+                },
+                child: const Text('削除'),
+              ),
+            ElevatedButton(
+              onPressed: () async {
+                if (maxZoom < minZoom) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('ズーム範囲が不正です')),
+                    );
+                  }
+                  return;
+                }
+                final bounds = _mapController.camera.visibleBounds;
+                await ref.read(offlineMapCacheServiceProvider).saveCachePlanForBounds(
+                  workAreaId: widget.workAreaId,
+                  bounds: bounds,
+                  minZoom: minZoom,
+                  maxZoom: maxZoom,
+                );
+                if (mounted) {
+                  Navigator.pop(context);
+                  _loadCacheInfo();
+                  _loadCacheStats();
+                  _loadSyncOverview();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('オフライン地図計画を保存しました')),
+                  );
+                }
+              },
+              child: const Text('保存'),
+            ),
+            ElevatedButton.icon(
+              onPressed: isDownloading
+                  ? null
+                  : () async {
+                if (maxZoom < minZoom) return;
+                final bounds = _mapController.camera.visibleBounds;
+                setDialogState(() {
+                  isDownloading = true;
+                  downloadProcessed = 0;
+                  downloadTotal = 0;
+                });
+                final result = await ref.read(offlineMapCacheServiceProvider).downloadTilesForBoundsDetailed(
+                      workAreaId: widget.workAreaId,
+                      bounds: bounds,
+                      minZoom: minZoom,
+                      maxZoom: maxZoom,
+                      onProgress: (processed, total) {
+                        setDialogState(() {
+                          downloadProcessed = processed;
+                          downloadTotal = total;
+                        });
+                      },
+                    );
+                await ref.read(offlineMapCacheServiceProvider).saveCachePlanForBounds(
+                      workAreaId: widget.workAreaId,
+                      bounds: bounds,
+                      minZoom: minZoom,
+                      maxZoom: maxZoom,
+                    );
+                setDialogState(() {
+                  isDownloading = false;
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('保存: ${result.downloaded}件 / 失敗: ${result.failed}件 / 既存: ${result.skipped}件')),
+                  );
+                  _loadCacheInfo();
+                  _loadCacheStats();
+                  _initializeOfflineTileMode();
+                }
+              },
+              icon: const Icon(Icons.download),
+              label: const Text('今すぐDL'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _refreshData() async {
@@ -234,6 +514,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                 if (mounted) {
                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('軌跡を保存しました')));
                    _refreshData();
+    _loadCacheInfo();
                    setState(() => _currentTrack = []);
                 }
             }
@@ -352,6 +633,7 @@ class _MapPageState extends ConsumerState<MapPage> {
       );
       _cancelDrawing();
       _refreshData();
+    _loadCacheInfo();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存エラー: $e')));
     }
@@ -449,6 +731,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   if (mounted) {
                     Navigator.pop(context);
                     _refreshData();
+    _loadCacheInfo();
                   }
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
@@ -571,6 +854,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   attributes: newAttrs,
                 );
                 _refreshData();
+    _loadCacheInfo();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('属性を更新しました')),
@@ -607,6 +891,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                 Navigator.pop(context); // Close details dialog
                 await ref.read(mapObjectRepositoryProvider).deleteMapObject(obj.id);
                 _refreshData();
+    _loadCacheInfo();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('削除しました')),
@@ -674,6 +959,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         attributes: obj.attributes,
       );
       _refreshData();
+    _loadCacheInfo();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('保存しました')),
@@ -729,6 +1015,86 @@ class _MapPageState extends ConsumerState<MapPage> {
     return total;
   }
 
+  double _calculateTotalPolygonAreaM2() {
+    var total = 0.0;
+    for (final polygon in _mapObjects.where((o) => o.type == MapObjectType.polygon)) {
+      if (polygon.points.length < 3) continue;
+      total += _measurementService.calculatePolygonArea(polygon.points);
+    }
+    return total;
+  }
+
+  int _calculateTodayUpdatedCount() {
+    final now = DateTime.now();
+    bool isSameDay(DateTime d) => d.year == now.year && d.month == now.month && d.day == now.day;
+
+    final mapObjectCount = _mapObjects.where((o) => isSameDay(o.updatedAt)).length;
+    final treeCount = _trees.where((tree) {
+      final raw = tree['updated_at'] ?? tree['created_at'];
+      if (raw == null) return false;
+      if (raw is DateTime) return isSameDay(raw);
+      try {
+        return isSameDay(DateTime.parse(raw.toString()));
+      } catch (_) {
+        return false;
+      }
+    }).length;
+
+    return mapObjectCount + treeCount;
+  }
+
+  int _calculateUpdatedCountInDays(int days) {
+    final now = DateTime.now();
+    final since = now.subtract(Duration(days: days));
+
+    final mapObjectCount = _mapObjects.where((o) => o.updatedAt.isAfter(since)).length;
+    final treeCount = _trees.where((tree) {
+      final raw = tree['updated_at'] ?? tree['created_at'];
+      if (raw == null) return false;
+      DateTime? ts;
+      if (raw is DateTime) {
+        ts = raw;
+      } else {
+        try {
+          ts = DateTime.parse(raw.toString());
+        } catch (_) {
+          ts = null;
+        }
+      }
+      return ts != null && ts.isAfter(since);
+    }).length;
+
+    return mapObjectCount + treeCount;
+  }
+
+  Map<String, int> _buildSpeciesCount() {
+    final counts = <String, int>{};
+    for (final tree in _trees) {
+      final species = (tree['species'] as String?)?.trim();
+      final key = (species == null || species.isEmpty) ? '不明' : species;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  void _openSummaryDashboard() {
+    showSummaryDashboard(
+      context,
+      trees: _trees,
+      mapObjects: _mapObjects,
+      trackDistance: _calculateTrackDistance(),
+      pendingSyncCount: _syncOverview?.totalPending ?? 0,
+      retryQueueCount: _syncOverview?.retryQueueCount ?? 0,
+      totalAreaM2: _calculateTotalPolygonAreaM2(),
+      lastSyncAt: _lastSyncAt,
+      lastSyncError: _lastSyncError,
+      todayUpdatedCount: _calculateTodayUpdatedCount(),
+      weekUpdatedCount: _calculateUpdatedCountInDays(7),
+      monthUpdatedCount: _calculateUpdatedCountInDays(30),
+      speciesCount: _buildSpeciesCount(),
+    );
+  }
+
   Future<void> _exportData() async {
     final format = await showExportDialog(context);
     if (format == null) return;
@@ -761,12 +1127,43 @@ class _MapPageState extends ConsumerState<MapPage> {
           IconButton(
             icon: const Icon(Icons.dashboard),
             tooltip: '調査サマリー',
-            onPressed: () => showSummaryDashboard(
-              context,
-              trees: _trees,
-              mapObjects: _mapObjects,
-              trackDistance: _calculateTrackDistance(),
+            onPressed: _openSummaryDashboard,
+          ),
+          IconButton(
+            tooltip: '同期ステータス',
+            icon: Badge(
+              isLabelVisible: (_syncOverview?.totalPending ?? 0) > 0,
+              label: Text('${_syncOverview?.totalPending ?? 0}'),
+              child: const Icon(Icons.sync),
             ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SyncStatusPage()),
+            ).then((_) => _loadSyncOverview()),
+          ),
+          IconButton(
+            tooltip: 'オフライン表示切替',
+            icon: Icon(
+              _preferOfflineTiles ? Icons.cloud_off : Icons.cloud_queue,
+              color: _preferOfflineTiles ? Colors.orange : null,
+            ),
+            onPressed: () {
+              if (_offlineTileBasePath == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('オフラインタイルが未保存です。先にDLしてください')),
+                );
+                return;
+              }
+              setState(() => _preferOfflineTiles = !_preferOfflineTiles);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(_preferOfflineTiles ? 'オフラインタイル表示を有効化' : 'オンラインタイル表示に戻しました')),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(_cacheInfo == null ? Icons.download_for_offline_outlined : Icons.download_done, color: _cacheInfo == null ? null : Colors.green),
+            tooltip: 'オフライン地図',
+            onPressed: _showOfflineCacheDialog,
           ),
           IconButton(
             icon: const Icon(Icons.photo_library),
@@ -777,6 +1174,29 @@ class _MapPageState extends ConsumerState<MapPage> {
                 builder: (context) => PhotoGalleryPage(workAreaId: widget.workAreaId),
               ),
             ),
+          ),
+          PopupMenuButton<TrackingMode>(
+            tooltip: '位置更新モード',
+            icon: const Icon(Icons.tune),
+            initialValue: _trackingMode,
+            onSelected: _updateTrackingMode,
+            itemBuilder: (context) => TrackingMode.values
+                .map(
+                  (mode) => PopupMenuItem(
+                    value: mode,
+                    child: Row(
+                      children: [
+                        if (_trackingMode == mode)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8),
+                            child: Icon(Icons.check, size: 16),
+                          ),
+                        Text('${_trackingModeLabel(mode)}（${mode == TrackingMode.highAccuracy ? '3m' : mode == TrackingMode.batterySaver ? '15m' : '7m'}）'),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
           ),
           IconButton(
             icon: const Icon(Icons.share),
@@ -798,11 +1218,26 @@ class _MapPageState extends ConsumerState<MapPage> {
               onTap: _handleMapTap,
             ),
             children: [
-              TileLayer(
-                urlTemplate: currentMapLayer.urlTemplate,
-                userAgentPackageName: 'com.forest_app.app',
-                subdomains: const ['a', 'b', 'c'],
-              ),
+              if (_preferOfflineTiles && _offlineTileBasePath != null) ...[
+                // Base online layer (fallback when local tile is missing)
+                TileLayer(
+                  urlTemplate: currentMapLayer.urlTemplate,
+                  userAgentPackageName: 'com.forest_app.app',
+                  subdomains: const ['a', 'b', 'c'],
+                ),
+                // Local cached layer on top
+                TileLayer(
+                  urlTemplate: 'file://$_offlineTileBasePath/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.forest_app.app',
+                  tileProvider: FileTileProvider(),
+                  subdomains: const [],
+                ),
+              ] else
+                TileLayer(
+                  urlTemplate: currentMapLayer.urlTemplate,
+                  userAgentPackageName: 'com.forest_app.app',
+                  subdomains: const ['a', 'b', 'c'],
+                ),
               // Render Polygons (Below lines/points)
               PolygonLayer(
                 polygons: [
@@ -1018,12 +1453,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                 FloatingActionButton.small(
                   heroTag: 'quick_summary',
                   backgroundColor: Colors.green[100],
-                  onPressed: () => showSummaryDashboard(
-                    context,
-                    trees: _trees,
-                    mapObjects: _mapObjects,
-                    trackDistance: _calculateTrackDistance(),
-                  ),
+                  onPressed: _openSummaryDashboard,
                   child: const Icon(Icons.dashboard, color: Colors.green),
                 ),
                 const SizedBox(height: 8),
@@ -1049,15 +1479,3 @@ class _MapPageState extends ConsumerState<MapPage> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-

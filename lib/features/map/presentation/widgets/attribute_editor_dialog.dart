@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 /// Supported attribute value types.
 enum AttributeType { text, number, date }
 
+enum SurveyTemplateType { custom, treeSurvey, boundaryCheck, routeInspection }
+
 /// A single custom attribute entry.
 class CustomAttribute {
   String key;
@@ -37,6 +39,7 @@ class _AttributeEditorDialogState extends State<_AttributeEditorDialog> {
   final List<CustomAttribute> _attributes = [];
   final _newKeyController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  SurveyTemplateType _selectedTemplate = SurveyTemplateType.custom;
 
   @override
   void initState() {
@@ -88,6 +91,28 @@ class _AttributeEditorDialogState extends State<_AttributeEditorDialog> {
   }
 
   void _save() {
+    final requiredKeys = _requiredKeysForTemplate(_selectedTemplate);
+    final missing = <String>[];
+    for (final key in requiredKeys) {
+      CustomAttribute? attr;
+      for (final candidate in _attributes) {
+        if (candidate.key == key) {
+          attr = candidate;
+          break;
+        }
+      }
+      final value = attr?.value;
+      final isEmpty = value == null || value.toString().trim().isEmpty;
+      if (isEmpty) missing.add(key);
+    }
+
+    if (missing.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('必須項目が未入力です: ${missing.join(', ')}')),
+      );
+      return;
+    }
+
     final result = <String, dynamic>{};
     for (final attr in _attributes) {
       if (attr.key.isNotEmpty) {
@@ -104,6 +129,52 @@ class _AttributeEditorDialogState extends State<_AttributeEditorDialog> {
     Navigator.of(context).pop(result);
   }
 
+  List<String> _requiredKeysForTemplate(SurveyTemplateType template) {
+    switch (template) {
+      case SurveyTemplateType.treeSurvey:
+        return const ['樹種', '樹高_m', '胸高直径_cm'];
+      case SurveyTemplateType.boundaryCheck:
+        return const ['境界杭番号', '破損有無', '確認日'];
+      case SurveyTemplateType.routeInspection:
+        return const ['路網種別', '通行可否'];
+      case SurveyTemplateType.custom:
+        return const [];
+    }
+  }
+
+  void _applyTemplate(SurveyTemplateType template) {
+    if (template == SurveyTemplateType.custom) return;
+
+    final templateAttributes = switch (template) {
+      SurveyTemplateType.treeSurvey => [
+        CustomAttribute(key: '樹種', value: '', type: AttributeType.text),
+        CustomAttribute(key: '樹高_m', value: '', type: AttributeType.number),
+        CustomAttribute(key: '胸高直径_cm', value: '', type: AttributeType.number),
+        CustomAttribute(key: '健康状態', value: '', type: AttributeType.text),
+      ],
+      SurveyTemplateType.boundaryCheck => [
+        CustomAttribute(key: '境界杭番号', value: '', type: AttributeType.text),
+        CustomAttribute(key: '破損有無', value: '', type: AttributeType.text),
+        CustomAttribute(key: '確認日', value: DateTime.now(), type: AttributeType.date),
+      ],
+      SurveyTemplateType.routeInspection => [
+        CustomAttribute(key: '路網種別', value: '', type: AttributeType.text),
+        CustomAttribute(key: '通行可否', value: '', type: AttributeType.text),
+        CustomAttribute(key: '危険度', value: '', type: AttributeType.text),
+      ],
+      SurveyTemplateType.custom => <CustomAttribute>[],
+    };
+
+    final existingKeys = _attributes.map((e) => e.key).toSet();
+    setState(() {
+      for (final attr in templateAttributes) {
+        if (!existingKeys.contains(attr.key)) {
+          _attributes.add(attr);
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -116,6 +187,25 @@ class _AttributeEditorDialogState extends State<_AttributeEditorDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Add new attribute
+              DropdownButtonFormField<SurveyTemplateType>(
+                value: _selectedTemplate,
+                decoration: const InputDecoration(
+                  labelText: '調査テンプレート',
+                  isDense: true,
+                ),
+                items: const [
+                  DropdownMenuItem(value: SurveyTemplateType.custom, child: Text('カスタム')),
+                  DropdownMenuItem(value: SurveyTemplateType.treeSurvey, child: Text('毎木調査')),
+                  DropdownMenuItem(value: SurveyTemplateType.boundaryCheck, child: Text('境界確認')),
+                  DropdownMenuItem(value: SurveyTemplateType.routeInspection, child: Text('路網点検')),
+                ],
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _selectedTemplate = v);
+                  _applyTemplate(v);
+                },
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/backup_service.dart';
+import '../../offline/data/sync_repository.dart';
+import '../../offline/presentation/sync_status_page.dart';
 
 /// Settings page for managing database backups.
 class BackupSettingsPage extends ConsumerStatefulWidget {
@@ -16,6 +18,8 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
   BackupFrequency _frequency = BackupFrequency.manual;
   bool _isLoading = true;
   bool _isOperating = false;
+  SyncOverview? _syncOverview;
+  int _retryQueueCount = 0;
 
   @override
   void initState() {
@@ -30,12 +34,16 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
     final backups = await service.getAvailableBackups();
     final lastBackup = await service.getLastBackupTime();
     final frequency = await service.getBackupFrequency();
+    final syncRepo = ref.read(syncRepositoryProvider);
+    final syncOverview = await syncRepo.getSyncOverview();
     
     if (mounted) {
       setState(() {
         _backups = backups;
         _lastBackupTime = lastBackup;
         _frequency = frequency;
+        _syncOverview = syncOverview;
+        _retryQueueCount = syncOverview.retryQueueCount;
         _isLoading = false;
       });
     }
@@ -154,7 +162,9 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                ListView(
+                RefreshIndicator(
+                  onRefresh: _loadData,
+                  child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
                     // Last backup info
@@ -172,6 +182,25 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
                     ),
                     const SizedBox(height: 16),
 
+
+                    // Sync status
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.sync, color: Colors.teal),
+                        title: const Text('同期ステータス'),
+                        subtitle: Text(
+                          _syncOverview == null
+                              ? '読み込み中...'
+                              : '未同期: ${_syncOverview!.totalPending}件（作業エリア ${_syncOverview!.pendingWorkAreas} / 樹木 ${_syncOverview!.pendingTrees}）\n競合ログ: ${_syncOverview!.conflictCount}件 / 再送キュー: ${_retryQueueCount}件',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SyncStatusPage()),
+                        ).then((_) => _loadData()),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Manual backup button
                     SizedBox(
                       width: double.infinity,
@@ -274,6 +303,7 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   ],
+                ),
                 ),
                 if (_isOperating)
                   Container(

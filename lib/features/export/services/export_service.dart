@@ -73,9 +73,26 @@ class ExportService {
     int timestamp,
   ) async {
     final rows = <List<dynamic>>[];
-    
+    final attributeKeys = <String>{};
+    for (final obj in mapObjects) {
+      if (obj.attributes != null) {
+        attributeKeys.addAll(obj.attributes!.keys);
+      }
+    }
+    final sortedAttrKeys = attributeKeys.toList()..sort();
+
     // Header
-    rows.add(['Type', 'ID', 'Name/Species', 'Description', 'Height', 'Diameter', 'Latitude', 'Longitude', 'Attributes']);
+    rows.add([
+      'Type',
+      'ID',
+      'Name/Species',
+      'Description',
+      'Height',
+      'Diameter',
+      'Latitude',
+      'Longitude',
+      ...sortedAttrKeys,
+    ]);
 
     // Trees
     for (var t in trees) {
@@ -90,7 +107,7 @@ class ExportService {
         t['diameter'],
         coords[1],
         coords[0],
-        '',
+        ...List.filled(sortedAttrKeys.length, ''),
       ]);
     }
 
@@ -111,7 +128,7 @@ class ExportService {
         '',
         lat,
         lng,
-        obj.attributes?.toString() ?? '',
+        ...sortedAttrKeys.map((key) => obj.attributes?[key] ?? ''),
       ]);
     }
 
@@ -268,4 +285,3 @@ Future<ExportFormat?> showExportDialog(BuildContext context) async {
     ),
   );
 }
-
