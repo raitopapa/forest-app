@@ -766,6 +766,15 @@ class _MapPageState extends ConsumerState<MapPage> {
               trees: _trees,
               mapObjects: _mapObjects,
               trackDistance: _calculateTrackDistance(),
+              pendingSyncCount: _syncOverview?.totalPending ?? 0,
+retryQueueCount: _syncOverview?.retryQueueCount ?? 0,
+totalAreaM2: _calculateTotalPolygonAreaM2(),
+lastSyncAt: _lastSyncAt,
+lastSyncError: _lastSyncError,
+todayUpdatedCount: _calculateTodayUpdatedCount(),
+weekUpdatedCount: _calculateUpdatedCountInDays(7),
+monthUpdatedCount: _calculateUpdatedCountInDays(30),
+speciesCount: _buildSpeciesCount(),
             ),
           ),
           IconButton(
@@ -1023,6 +1032,15 @@ class _MapPageState extends ConsumerState<MapPage> {
                     trees: _trees,
                     mapObjects: _mapObjects,
                     trackDistance: _calculateTrackDistance(),
+                    pendingSyncCount: _syncOverview?.totalPending ?? 0,
+retryQueueCount: _syncOverview?.retryQueueCount ?? 0,
+totalAreaM2: _calculateTotalPolygonAreaM2(),
+lastSyncAt: _lastSyncAt,
+lastSyncError: _lastSyncError,
+todayUpdatedCount: _calculateTodayUpdatedCount(),
+weekUpdatedCount: _calculateUpdatedCountInDays(7),
+monthUpdatedCount: _calculateUpdatedCountInDays(30),
+speciesCount: _buildSpeciesCount(),
                   ),
                   child: const Icon(Icons.dashboard, color: Colors.green),
                 ),
@@ -1048,6 +1066,62 @@ class _MapPageState extends ConsumerState<MapPage> {
           : null, // Hide FAB when drawing
     );
   }
+  int _calculateTodayUpdatedCount() {
+  final now = DateTime.now();
+  bool isSameDay(DateTime d) =>
+      d.year == now.year && d.month == now.month && d.day == now.day;
+
+  final mapObjectCount = _mapObjects.where((o) => isSameDay(o.updatedAt)).length;
+  final treeCount = _trees.where((tree) {
+    final raw = tree['updated_at'] ?? tree['created_at'];
+    if (raw == null) return false;
+    if (raw is DateTime) return isSameDay(raw);
+    try {
+      return isSameDay(DateTime.parse(raw.toString()));
+    } catch (_) {
+      return false;
+    }
+  }).length;
+
+  return mapObjectCount + treeCount;
+}
+
+int _calculateUpdatedCountInDays(int days) {
+  final now = DateTime.now();
+  final since = now.subtract(Duration(days: days));
+
+  final mapObjectCount =
+      _mapObjects.where((o) => o.updatedAt.isAfter(since)).length;
+
+  final treeCount = _trees.where((tree) {
+    final raw = tree['updated_at'] ?? tree['created_at'];
+    if (raw == null) return false;
+
+    DateTime? ts;
+    if (raw is DateTime) {
+      ts = raw;
+    } else {
+      try {
+        ts = DateTime.parse(raw.toString());
+      } catch (_) {
+        ts = null;
+      }
+    }
+    return ts != null && ts.isAfter(since);
+  }).length;
+
+  return mapObjectCount + treeCount;
+}
+
+Map<String, int> _buildSpeciesCount() {
+  final counts = <String, int>{};
+  for (final tree in _trees) {
+    final species = (tree['species'] as String?)?.trim();
+    final key = (species == null || species.isEmpty) ? '不明' : species;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
 }
 
 
