@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../domain/models/map_object.dart';
 
 /// Summary dashboard showing statistics for the current work area.
@@ -45,7 +45,7 @@ class SummaryDashboard extends StatelessWidget {
               const Icon(Icons.dashboard, color: Colors.green),
               const SizedBox(width: 8),
               const Text(
-                '調査サマリー',
+                'èª¿æŸ»ã‚µãƒžãƒªãƒ¼',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
@@ -63,28 +63,28 @@ class SummaryDashboard extends StatelessWidget {
           // Stats Grid
           Row(
             children: [
-              Expanded(child: _buildStatCard('🌳', '樹木', trees.length)),
+              Expanded(child: _buildStatCard('ðŸŒ³', 'æ¨¹æœ¨', trees.length)),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('📍', 'ポイント', pointCount)),
+              Expanded(child: _buildStatCard('ðŸ“', 'ãƒã‚¤ãƒ³ãƒˆ', pointCount)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildStatCard('📏', 'ライン', lineCount)),
+              Expanded(child: _buildStatCard('ðŸ“', 'ãƒ©ã‚¤ãƒ³', lineCount)),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('⬡', 'ポリゴン', polygonCount)),
+              Expanded(child: _buildStatCard('â¬¡', 'ãƒãƒªã‚´ãƒ³', polygonCount)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildStatCard('📸', '写真', photoCount)),
+              Expanded(child: _buildStatCard('ðŸ“¸', 'å†™çœŸ', photoCount)),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  '🚶',
-                  '歩行距離',
+                  'ðŸš¶',
+                  'æ­©è¡Œè·é›¢',
                   trackDistance != null 
                       ? '${(trackDistance! / 1000).toStringAsFixed(2)} km'
                       : '-',
@@ -96,15 +96,15 @@ class SummaryDashboard extends StatelessWidget {
           const SizedBox(height: 16),
           
           // Species breakdown
-          if (trees.isNotEmpty) ...[
+          if (speciesData.isNotEmpty) ...[
             const Divider(),
             const SizedBox(height: 8),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text('樹種内訳', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('æ¨¹ç¨®å†…è¨³', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 8),
-            _buildSpeciesBreakdown(),
+            _buildSpeciesBreakdown(speciesData),
           ],
         ],
       ),
@@ -132,10 +132,10 @@ class SummaryDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildSpeciesBreakdown() {
+  Widget _buildSpeciesBreakdown(speciesData) {
     final speciesCount = <String, int>{};
     for (final tree in trees) {
-      final species = tree['species'] as String? ?? '不明';
+      final species = tree['species'] as String? ?? 'ä¸æ˜Ž';
       speciesCount[species] = (speciesCount[species] ?? 0) + 1;
     }
 
@@ -148,7 +148,7 @@ class SummaryDashboard extends StatelessWidget {
       children: sortedSpecies.take(6).map((e) {
         return Chip(
           avatar: const Icon(Icons.park, size: 16, color: Colors.green),
-          label: Text('${e.key}: ${e.value}本'),
+          label: Text('${e.key}: ${e.value}æœ¬'),
           backgroundColor: Colors.green[50],
         );
       }).toList(),
@@ -173,3 +173,4 @@ void showSummaryDashboard(
     ),
   );
 }
+
