@@ -43,10 +43,10 @@ class FeedbackService {
     }
 
     // メーラーが無い／権限が無い場合は共有シートへ
-    await Share.share(
-      '$subject\n\n$body',
+    await SharePlus.instance.share(ShareParams(
+      text: '$subject\n\n$body',
       subject: subject,
-    );
+    ));
     return true;
   }
 

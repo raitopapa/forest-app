@@ -464,7 +464,7 @@ class _TreeInputDialogState extends State<TreeInputDialog> with SingleTickerProv
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.explore),
                   ),
-                  value: _selectedAspect,
+                  initialValue: _selectedAspect,
                   items: Aspect.values.map((aspect) {
                     return DropdownMenuItem(
                       value: aspect,

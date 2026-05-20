@@ -124,7 +124,7 @@ class _WorkAreaCreatePageState extends ConsumerState<WorkAreaCreatePage> {
                     if (_points.isNotEmpty)
                       Polygon(
                         points: _points,
-                        color: Colors.blue.withOpacity(0.3),
+                        color: Colors.blue.withValues(alpha:0.3),
                         borderColor: Colors.blue,
                         borderStrokeWidth: 2,
                         isFilled: true,

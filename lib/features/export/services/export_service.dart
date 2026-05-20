@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
@@ -59,7 +58,10 @@ class ExportService {
 
     // Share Files
     if (filesToShare.isNotEmpty) {
-      await Share.shareXFiles(filesToShare, text: 'Forest App Data Export');
+      await SharePlus.instance.share(ShareParams(
+        files: filesToShare,
+        text: 'Forest App Data Export',
+      ));
     }
 
     return filesToShare;
