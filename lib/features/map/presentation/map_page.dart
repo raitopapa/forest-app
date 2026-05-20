@@ -4,8 +4,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 import '../data/tree_repository.dart';
 import '../data/map_object_repository.dart';
 import '../domain/models/map_layer.dart';
@@ -18,6 +16,7 @@ import '../domain/services/track_recorder_service.dart';
 import 'photo_gallery_page.dart';
 import 'widgets/attribute_editor_dialog.dart';
 import 'widgets/summary_dashboard.dart';
+import 'widgets/tree_input_dialog.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 
@@ -390,74 +389,71 @@ class _MapPageState extends ConsumerState<MapPage> {
     );
   }
 
-  // --- Legacy Tree Logic ---
+  // --- Enhanced Tree Input (TreeInputDialog) ---
   void _showAddTreeDialog() {
     final center = _mapController.camera.center;
-    final speciesController = TextEditingController();
-    final heightController = TextEditingController();
-    final diameterController = TextEditingController();
-    String? photoPath;
+    final locationText =
+        '${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}';
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('樹木を登録'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('位置: ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}'),
-                TextField(controller: speciesController, decoration: const InputDecoration(labelText: '樹種')),
-                TextField(controller: heightController, decoration: const InputDecoration(labelText: '樹高 (m)'), keyboardType: TextInputType.number),
-                TextField(controller: diameterController, decoration: const InputDecoration(labelText: '胸高直径 (cm)'), keyboardType: TextInputType.number),
-                const SizedBox(height: 16),
-                if (photoPath != null)
-                  SizedBox(
-                    height: 100,
-                    child: Image.file(File(photoPath!)),
-                  ),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
-                    if (pickedFile != null) {
-                      setState(() {
-                        photoPath = pickedFile.path;
-                      });
-                    }
-                  },
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('写真を撮る'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await ref.read(treeRepositoryProvider).createTree(
-                        species: speciesController.text,
-                        height: double.tryParse(heightController.text),
-                        diameter: double.tryParse(diameterController.text),
-                        lat: center.latitude,
-                        lng: center.longitude,
-                        workAreaId: widget.workAreaId,
-                        photoPath: photoPath,
-                      );
-                  if (mounted) {
-                    Navigator.pop(context);
-                    _refreshData();
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-                }
-              },
-              child: const Text('登録'),
-            ),
-          ],
-        ),
+      builder: (context) => TreeInputDialog(
+        locationText: locationText,
+        onSubmit: ({
+          required String species,
+          double? height,
+          double? diameter,
+          String? healthStatus,
+          String? photoPath,
+          double? volume,
+          int? age,
+          String? forestSection,
+          String? subSection,
+          String? treeNumber,
+          String? vigor,
+          String? pestDisease,
+          double? slope,
+          String? aspect,
+          String? notes,
+          bool markedForThinning = false,
+        }) async {
+          try {
+            await ref.read(treeRepositoryProvider).createTree(
+                  species: species,
+                  height: height,
+                  diameter: diameter,
+                  healthStatus: healthStatus,
+                  lat: center.latitude,
+                  lng: center.longitude,
+                  workAreaId: widget.workAreaId,
+                  photoPath: photoPath,
+                  volume: volume,
+                  age: age,
+                  forestSection: forestSection,
+                  subSection: subSection,
+                  treeNumber: treeNumber,
+                  vigor: vigor,
+                  pestDisease: pestDisease,
+                  slope: slope,
+                  aspect: aspect,
+                  notes: notes,
+                  markedForThinning: markedForThinning,
+                );
+            if (mounted) {
+              Navigator.pop(context);
+              _refreshData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('樹木を登録しました')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('エラー: $e')),
+              );
+            }
+          }
+        },
       ),
     );
   }
@@ -766,15 +762,6 @@ class _MapPageState extends ConsumerState<MapPage> {
               trees: _trees,
               mapObjects: _mapObjects,
               trackDistance: _calculateTrackDistance(),
-              pendingSyncCount: 0,
-retryQueueCount: 0,
-totalAreaM2: 0.0,
-lastSyncAt: null,
-lastSyncError: null,
-todayUpdatedCount: _calculateTodayUpdatedCount(),
-weekUpdatedCount: _calculateUpdatedCountInDays(7),
-monthUpdatedCount: _calculateUpdatedCountInDays(30),
-speciesCount: _buildSpeciesCount(),
             ),
           ),
           IconButton(
@@ -1032,15 +1019,6 @@ speciesCount: _buildSpeciesCount(),
                     trees: _trees,
                     mapObjects: _mapObjects,
                     trackDistance: _calculateTrackDistance(),
-                    pendingSyncCount: 0,
-retryQueueCount: 0,
-totalAreaM2: 0.0,
-lastSyncAt: null,
-lastSyncError: null,
-todayUpdatedCount: _calculateTodayUpdatedCount(),
-weekUpdatedCount: _calculateUpdatedCountInDays(7),
-monthUpdatedCount: _calculateUpdatedCountInDays(30),
-speciesCount: _buildSpeciesCount(),
                   ),
                   child: const Icon(Icons.dashboard, color: Colors.green),
                 ),
@@ -1066,62 +1044,6 @@ speciesCount: _buildSpeciesCount(),
           : null, // Hide FAB when drawing
     );
   }
-  int _calculateTodayUpdatedCount() {
-  final now = DateTime.now();
-  bool isSameDay(DateTime d) =>
-      d.year == now.year && d.month == now.month && d.day == now.day;
-
-  final mapObjectCount = _mapObjects.where((o) => isSameDay(o.updatedAt)).length;
-  final treeCount = _trees.where((tree) {
-    final raw = tree['updated_at'] ?? tree['created_at'];
-    if (raw == null) return false;
-    if (raw is DateTime) return isSameDay(raw);
-    try {
-      return isSameDay(DateTime.parse(raw.toString()));
-    } catch (_) {
-      return false;
-    }
-  }).length;
-
-  return mapObjectCount + treeCount;
-}
-
-int _calculateUpdatedCountInDays(int days) {
-  final now = DateTime.now();
-  final since = now.subtract(Duration(days: days));
-
-  final mapObjectCount =
-      _mapObjects.where((o) => o.updatedAt.isAfter(since)).length;
-
-  final treeCount = _trees.where((tree) {
-    final raw = tree['updated_at'] ?? tree['created_at'];
-    if (raw == null) return false;
-
-    DateTime? ts;
-    if (raw is DateTime) {
-      ts = raw;
-    } else {
-      try {
-        ts = DateTime.parse(raw.toString());
-      } catch (_) {
-        ts = null;
-      }
-    }
-    return ts != null && ts.isAfter(since);
-  }).length;
-
-  return mapObjectCount + treeCount;
-}
-
-Map<String, int> _buildSpeciesCount() {
-  final counts = <String, int>{};
-  for (final tree in _trees) {
-    final species = (tree['species'] as String?)?.trim();
-    final key = (species == null || species.isEmpty) ? '不明' : species;
-    counts[key] = (counts[key] ?? 0) + 1;
-  }
-  return counts;
-}
 }
 
 
