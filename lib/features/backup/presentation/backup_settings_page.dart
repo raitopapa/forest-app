@@ -190,30 +190,28 @@ class _BackupSettingsPageState extends ConsumerState<BackupSettingsPage> {
                     const Text('自動バックアップ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 8),
                     Card(
-                      child: Column(
-                        children: [
-                          RadioListTile<BackupFrequency>(
-                            title: const Text('手動のみ'),
-                            subtitle: const Text('自動バックアップを無効にする'),
-                            value: BackupFrequency.manual,
-                            groupValue: _frequency,
-                            onChanged: (v) => v != null ? _setFrequency(v) : null,
-                          ),
-                          RadioListTile<BackupFrequency>(
-                            title: const Text('毎日'),
-                            subtitle: const Text('24時間ごとに自動バックアップ'),
-                            value: BackupFrequency.daily,
-                            groupValue: _frequency,
-                            onChanged: (v) => v != null ? _setFrequency(v) : null,
-                          ),
-                          RadioListTile<BackupFrequency>(
-                            title: const Text('毎週'),
-                            subtitle: const Text('7日ごとに自動バックアップ'),
-                            value: BackupFrequency.weekly,
-                            groupValue: _frequency,
-                            onChanged: (v) => v != null ? _setFrequency(v) : null,
-                          ),
-                        ],
+                      child: RadioGroup<BackupFrequency>(
+                        groupValue: _frequency,
+                        onChanged: (v) => v != null ? _setFrequency(v) : null,
+                        child: const Column(
+                          children: [
+                            RadioListTile<BackupFrequency>(
+                              title: Text('手動のみ'),
+                              subtitle: Text('自動バックアップを無効にする'),
+                              value: BackupFrequency.manual,
+                            ),
+                            RadioListTile<BackupFrequency>(
+                              title: Text('毎日'),
+                              subtitle: Text('24時間ごとに自動バックアップ'),
+                              value: BackupFrequency.daily,
+                            ),
+                            RadioListTile<BackupFrequency>(
+                              title: Text('毎週'),
+                              subtitle: Text('7日ごとに自動バックアップ'),
+                              value: BackupFrequency.weekly,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),

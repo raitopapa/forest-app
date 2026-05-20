@@ -809,11 +809,11 @@ class _MapPageState extends ConsumerState<MapPage> {
                        final xy = pair.trim().split(' ');
                        return LatLng(double.parse(xy[1]), double.parse(xy[0]));
                     }).toList();
-                    return Polygon(points: points, color: Colors.purple.withOpacity(0.3), borderColor: Colors.purple, borderStrokeWidth: 2);
+                    return Polygon(points: points, color: Colors.purple.withValues(alpha:0.3), borderColor: Colors.purple, borderStrokeWidth: 2);
                   }),
                   // Drawing Polygon
                   if (_activeTool == DrawingToolType.polygon && _drawingPoints.isNotEmpty)
-                    Polygon(points: _drawingPoints, color: Colors.orange.withOpacity(0.3), borderColor: Colors.orange, borderStrokeWidth: 2, isDotted: true),
+                    Polygon(points: _drawingPoints, color: Colors.orange.withValues(alpha:0.3), borderColor: Colors.orange, borderStrokeWidth: 2, isDotted: true),
                 ],
               ),
               // Render Lines
@@ -906,7 +906,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withOpacity(0.3),
+                              color: Colors.blue.withValues(alpha:0.3),
                               blurRadius: 10,
                               spreadRadius: 5,
                             ),

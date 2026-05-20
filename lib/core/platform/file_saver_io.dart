@@ -21,10 +21,10 @@ class FileSaver {
       await file.writeAsBytes(bytes);
 
       // 共有シート経由でユーザーが「写真に保存」「Drive に保存」「LINE で送る」等を選べる
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: mimeType)],
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: mimeType)],
         subject: filename,
-      );
+      ));
       return true;
     } catch (e, st) {
       // Sentry や logger に送る場合はここで送信

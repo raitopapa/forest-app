@@ -63,7 +63,7 @@ class PdfGeneratorService {
           pw.Text('樹木調査記録', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 12),
 
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             cellStyle: const pw.TextStyle(fontSize: 9),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -204,7 +204,7 @@ class PdfGeneratorService {
           // 樹種別統計
           pw.Text('樹種別内訳', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 12),
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             cellStyle: const pw.TextStyle(fontSize: 9),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -437,11 +437,11 @@ class PdfGeneratorService {
     await file.writeAsBytes(await pdf.save());
 
     // 共有
-    await Share.shareXFiles(
-      [XFile(file.path)],
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(file.path)],
       subject: 'Forest Management Report',
       text: '森林管理アプリから生成されたレポート',
-    );
+    ));
   }
 
   /// プレビュー表示
