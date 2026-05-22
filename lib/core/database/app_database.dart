@@ -84,6 +84,10 @@ class LocalPlots extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// マイグレーションテスト等で QueryExecutor を直接差し替えるための constructor。
+  /// 本番コードからは呼ばないこと。
+  AppDatabase.forTesting(QueryExecutor e) : super(e);
+
   @override
   int get schemaVersion => 5;
 
