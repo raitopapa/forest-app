@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/platform/image_source.dart';
 import '../../domain/models/tree.dart';
 
 /// 拡張樹木入力ダイアログ - 林業実務対応
@@ -333,8 +333,8 @@ class _TreeInputDialogState extends State<TreeInputDialog> with SingleTickerProv
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(_photoPath!),
+                  child: ImageSourceWidget(
+                    path: _photoPath,
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
