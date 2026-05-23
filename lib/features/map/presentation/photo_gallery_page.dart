@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/platform/image_source.dart';
 import '../data/map_object_repository.dart';
 import '../domain/models/map_object.dart';
 
@@ -28,8 +28,8 @@ class _PhotoGalleryPageState extends ConsumerState<PhotoGalleryPage> {
     setState(() => _isLoading = true);
     
     final allObjects = await ref.read(mapObjectRepositoryProvider).getMapObjects(widget.workAreaId);
-    final withPhotos = allObjects.where((obj) => 
-        obj.photoPath != null && File(obj.photoPath!).existsSync()
+    final withPhotos = allObjects.where((obj) =>
+        obj.photoPath != null && obj.photoPath!.isNotEmpty
     ).toList();
     
     if (mounted) {
@@ -96,11 +96,12 @@ class _PhotoGalleryPageState extends ConsumerState<PhotoGalleryPage> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.file(
-                                File(obj.photoPath!),
+                              ImageSourceWidget(
+                                path: obj.photoPath,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => 
-                                    const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                                placeholder: const Center(
+                                  child: Icon(Icons.broken_image, color: Colors.grey),
+                                ),
                               ),
                               // Type badge
                               Positioned(
@@ -153,11 +154,12 @@ class _PhotoDetailPage extends StatelessWidget {
               tag: 'photo_${mapObject.id}',
               child: InteractiveViewer(
                 child: Center(
-                  child: Image.file(
-                    File(mapObject.photoPath!),
+                  child: ImageSourceWidget(
+                    path: mapObject.photoPath,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => 
-                        const Center(child: Icon(Icons.broken_image, color: Colors.white, size: 64)),
+                    placeholder: const Center(
+                      child: Icon(Icons.broken_image, color: Colors.white, size: 64),
+                    ),
                   ),
                 ),
               ),

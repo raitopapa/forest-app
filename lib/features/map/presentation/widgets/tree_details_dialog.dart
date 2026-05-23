@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../../core/platform/image_source.dart';
 import '../../domain/models/tree.dart';
 
 /// 拡張樹木詳細表示ダイアログ
@@ -112,22 +112,13 @@ class TreeDetailsDialog extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 写真
-                  if (photoPath != null && File(photoPath).existsSync())
+                  // 写真 (path 優先 -> URL fallback、どちらも無ければ park アイコンを表示)
+                  if (photoPath != null || photoUrl != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(photoPath),
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  else if (photoUrl != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        photoUrl,
+                      child: ImageSourceWidget(
+                        path: photoPath,
+                        url: photoUrl,
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,
