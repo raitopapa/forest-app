@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,9 @@ import '../data/tree_repository.dart';
 import '../data/map_object_repository.dart';
 import '../domain/models/map_layer.dart';
 import '../domain/models/map_object.dart';
+import '../../plot/data/plot_repository.dart';
+import '../../plot/domain/models/plot.dart';
+import '../../plot/presentation/widgets/plot_create_dialog.dart';
 import 'widgets/map_layer_selector.dart';
 import 'widgets/map_drawing_toolbar.dart';
 import '../../export/services/export_service.dart';
@@ -36,6 +40,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   // Data
   List<Map<String, dynamic>> _trees = [];
   List<MapObject> _mapObjects = [];
+  List<Plot> _plots = [];
   
   // UI State
   MapLayerType _currentLayerType = MapLayerType.standard;
@@ -150,13 +155,75 @@ class _MapPageState extends ConsumerState<MapPage> {
   Future<void> _refreshData() async {
     final trees = await ref.read(treeRepositoryProvider).getTrees(widget.workAreaId);
     final mapObjects = await ref.read(mapObjectRepositoryProvider).getMapObjects(widget.workAreaId);
-    
+    final plots = await ref.read(plotRepositoryProvider).getPlots(widget.workAreaId);
+
     if (mounted) {
       setState(() {
         _trees = trees;
         _mapObjects = mapObjects;
+        _plots = plots;
       });
     }
+  }
+
+  /// 方形プロットの 4 隅を計算するヘルパー (中心 + 一辺長 → polygon の頂点)
+  List<LatLng> _squareCorners(LatLng center, double sizeMeters) {
+    const earthMetersPerDeg = 111000.0; // 緯度 1° ≒ 111km
+    final halfM = sizeMeters / 2;
+    final latOffset = halfM / earthMetersPerDeg;
+    final lngOffset =
+        halfM / (earthMetersPerDeg * math.cos(center.latitude * math.pi / 180));
+    return [
+      LatLng(center.latitude + latOffset, center.longitude - lngOffset),
+      LatLng(center.latitude + latOffset, center.longitude + lngOffset),
+      LatLng(center.latitude - latOffset, center.longitude + lngOffset),
+      LatLng(center.latitude - latOffset, center.longitude - lngOffset),
+    ];
+  }
+
+  /// プロット作成ダイアログを表示
+  void _showCreatePlotDialog() {
+    final center = _mapController.camera.center;
+    final locationText =
+        '${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}';
+
+    showDialog(
+      context: context,
+      builder: (context) => PlotCreateDialog(
+        locationText: locationText,
+        onSubmit: ({
+          required String name,
+          required PlotShape shape,
+          required double size,
+          String? description,
+        }) async {
+          try {
+            await ref.read(plotRepositoryProvider).createPlot(
+                  name: name,
+                  shape: shape,
+                  centerLat: center.latitude,
+                  centerLng: center.longitude,
+                  size: size,
+                  workAreaId: widget.workAreaId,
+                  description: description,
+                );
+            if (mounted) {
+              Navigator.pop(context);
+              _refreshData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('プロットを作成しました')),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('プロット作成エラー: $e')),
+              );
+            }
+          }
+        },
+      ),
+    );
   }
 
 
@@ -811,10 +878,32 @@ class _MapPageState extends ConsumerState<MapPage> {
                     }).toList();
                     return Polygon(points: points, color: Colors.purple.withValues(alpha:0.3), borderColor: Colors.purple, borderStrokeWidth: 2);
                   }),
+                  // Square plots
+                  ..._plots.where((p) => p.shape == PlotShape.square).map((plot) {
+                    return Polygon(
+                      points: _squareCorners(LatLng(plot.centerLat, plot.centerLng), plot.size),
+                      color: Colors.cyan.withValues(alpha: 0.25),
+                      borderColor: Colors.cyan,
+                      borderStrokeWidth: 2,
+                    );
+                  }),
                   // Drawing Polygon
                   if (_activeTool == DrawingToolType.polygon && _drawingPoints.isNotEmpty)
                     Polygon(points: _drawingPoints, color: Colors.orange.withValues(alpha:0.3), borderColor: Colors.orange, borderStrokeWidth: 2, isDotted: true),
                 ],
+              ),
+              // Circle plots (実メートル単位で描画)
+              CircleLayer(
+                circles: _plots.where((p) => p.shape == PlotShape.circle).map((plot) {
+                  return CircleMarker(
+                    point: LatLng(plot.centerLat, plot.centerLng),
+                    radius: plot.size,
+                    useRadiusInMeter: true,
+                    color: Colors.cyan.withValues(alpha: 0.25),
+                    borderColor: Colors.cyan,
+                    borderStrokeWidth: 2,
+                  );
+                }).toList(),
               ),
               // Render Lines
               PolylineLayer(
@@ -1029,6 +1118,15 @@ class _MapPageState extends ConsumerState<MapPage> {
                   backgroundColor: Colors.blue[100],
                   onPressed: _goToCurrentLocation,
                   child: const Icon(Icons.my_location, color: Colors.blue),
+                ),
+                const SizedBox(height: 8),
+                // Plot creation
+                FloatingActionButton.small(
+                  heroTag: 'add_plot',
+                  backgroundColor: Colors.cyan[100],
+                  onPressed: _showCreatePlotDialog,
+                  tooltip: 'プロット追加',
+                  child: const Icon(Icons.crop_square, color: Colors.cyan),
                 ),
                 const SizedBox(height: 12),
                 // Main action button
