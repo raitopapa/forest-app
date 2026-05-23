@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import '../../../core/platform/file_reader.dart';
 import '../../../core/platform/file_saver.dart';
 import '../../statistics/domain/models/work_area_statistics.dart';
 import '../../plot/domain/models/plot.dart';
@@ -281,13 +284,20 @@ class PdfGeneratorService {
     final dateFormat = DateFormat('yyyy年MM月dd日');
 
     // 写真パスがあるアイテムのみフィルター
-    // (現状の PDF 出力は写真プレースホルダのみ埋め込むため、実ファイルの
-    // 存在確認は行わない。実画像埋め込み対応時は core/platform/image_source
-    // の PickedImage を経由する形で別途リファクタする)
     final itemsWithPhotos = items.where((item) {
       final photoPath = item['photo_path'] as String?;
       return photoPath != null && photoPath.isNotEmpty;
     }).toList();
+
+    // 写真 bytes を並列に事前取得
+    // - モバイル / Desktop: FileReader (dart:io File.readAsBytes) が bytes を返す
+    // - Web: FileReader が常に null を返す (blob URL から bytes を読めないため)
+    //   → Web では従来通りプレースホルダ「[写真なし]」表示
+    final photoBytes = <String, Uint8List?>{};
+    await Future.wait(itemsWithPhotos.map((item) async {
+      final path = item['photo_path'] as String;
+      photoBytes[path] = await FileReader.readBytes(path);
+    }));
 
     pdf.addPage(
       pw.MultiPage(
@@ -334,21 +344,31 @@ class PdfGeneratorService {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: rowItems.map((item) {
+                  final path = item['photo_path'] as String;
+                  final bytes = photoBytes[path];
                   return pw.Expanded(
                     child: pw.Container(
                       margin: const pw.EdgeInsets.symmetric(horizontal: 4),
                       child: pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          // 写真 (非同期読み込みのため、実装時は注意)
+                          // 写真 (mobile/Desktop: 実画像 / Web: プレースホルダ)
                           pw.Container(
                             height: 150,
                             decoration: pw.BoxDecoration(
                               border: pw.Border.all(color: PdfColors.grey300),
                             ),
-                            child: pw.Center(
-                              child: pw.Text('[写真]', style: const pw.TextStyle(color: PdfColors.grey)),
-                            ),
+                            child: bytes != null
+                                ? pw.Image(
+                                    pw.MemoryImage(bytes),
+                                    fit: pw.BoxFit.cover,
+                                  )
+                                : pw.Center(
+                                    child: pw.Text(
+                                      '[写真なし]',
+                                      style: const pw.TextStyle(color: PdfColors.grey),
+                                    ),
+                                  ),
                           ),
                           pw.SizedBox(height: 4),
                           // キャプション
