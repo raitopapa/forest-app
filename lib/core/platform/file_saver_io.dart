@@ -14,6 +14,8 @@ class FileSaver {
     required String filename,
     required Uint8List bytes,
     String mimeType = 'application/octet-stream',
+    String? subject,
+    String? text,
   }) async {
     try {
       final dir = await getTemporaryDirectory();
@@ -23,11 +25,12 @@ class FileSaver {
       // 共有シート経由でユーザーが「写真に保存」「Drive に保存」「LINE で送る」等を選べる
       await SharePlus.instance.share(ShareParams(
         files: [XFile(file.path, mimeType: mimeType)],
-        subject: filename,
+        subject: subject ?? filename,
+        text: text,
       ));
       return true;
     } catch (e, st) {
-      // Sentry や logger に送る場合はここで送信
+      // ignore: avoid_print
       print('FileSaver.save failed: $e\n$st');
       return false;
     }

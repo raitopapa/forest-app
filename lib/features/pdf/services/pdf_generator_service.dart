@@ -1,11 +1,9 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import '../../../core/platform/file_saver.dart';
 import '../../statistics/domain/models/work_area_statistics.dart';
 import '../../plot/domain/models/plot.dart';
 
@@ -282,10 +280,13 @@ class PdfGeneratorService {
     final now = DateTime.now();
     final dateFormat = DateFormat('yyyy年MM月dd日');
 
-    // 写真付きアイテムのみフィルター
+    // 写真パスがあるアイテムのみフィルター
+    // (現状の PDF 出力は写真プレースホルダのみ埋め込むため、実ファイルの
+    // 存在確認は行わない。実画像埋め込み対応時は core/platform/image_source
+    // の PickedImage を経由する形で別途リファクタする)
     final itemsWithPhotos = items.where((item) {
       final photoPath = item['photo_path'] as String?;
-      return photoPath != null && File(photoPath).existsSync();
+      return photoPath != null && photoPath.isNotEmpty;
     }).toList();
 
     pdf.addPage(
@@ -430,18 +431,16 @@ class PdfGeneratorService {
     return parts.isEmpty ? '-' : parts.join(', ');
   }
 
-  /// PDFを保存して共有
+  /// PDFを保存して共有 (モバイル/Desktop: 共有シート / Web: ブラウザダウンロード)
   Future<void> _savePdf(pw.Document pdf, String filename) async {
-    final output = await getTemporaryDirectory();
-    final file = File('${output.path}/$filename');
-    await file.writeAsBytes(await pdf.save());
-
-    // 共有
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path)],
+    final bytes = await pdf.save();
+    await FileSaver.save(
+      filename: filename,
+      bytes: bytes,
+      mimeType: 'application/pdf',
       subject: 'Forest Management Report',
       text: '森林管理アプリから生成されたレポート',
-    ));
+    );
   }
 
   /// プレビュー表示

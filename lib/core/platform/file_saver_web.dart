@@ -3,6 +3,9 @@
 // Flutter Web 向け実装 (package:web + dart:js_interop)。
 // Blob を生成して anchor クリックで download 属性を発火し、
 // ブラウザのダウンロードダイアログを出す。
+//
+// [subject] / [text] は mobile 共有シート用パラメータのため Web では無視する
+// (ダウンロードに「件名」「本文」の概念がない)。
 
 import 'dart:js_interop';
 import 'dart:typed_data';
@@ -14,6 +17,8 @@ class FileSaver {
     required String filename,
     required Uint8List bytes,
     String mimeType = 'application/octet-stream',
+    String? subject,
+    String? text,
   }) async {
     try {
       final blob = web.Blob(
