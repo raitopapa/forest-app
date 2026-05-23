@@ -14,12 +14,16 @@ class FileSaver {
   /// - [filename]: 保存時のファイル名（拡張子込み）。例: "trees.csv"
   /// - [bytes]: 保存するバイト列。
   /// - [mimeType]: MIME タイプ（Web では必須）。例: "text/csv"
+  /// - [subject]: モバイル共有シートで使われる件名 (Web では無視)。
+  /// - [text]: モバイル共有シートで使われる本文 (Web では無視)。
   ///
   /// 戻り値は保存に成功した場合 true。
   static Future<bool> save({
     required String filename,
     required Uint8List bytes,
     String mimeType = 'application/octet-stream',
+    String? subject,
+    String? text,
   }) async {
     throw UnsupportedError(
       'FileSaver は dart:io または dart:html のいずれかが必要です。'
