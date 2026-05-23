@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/platform/image_source.dart';
 import '../data/tree_repository.dart';
 import '../data/map_object_repository.dart';
 import '../domain/models/map_layer.dart';
@@ -349,7 +349,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                 Stack(
                     alignment: Alignment.topRight,
                     children: [
-                        SizedBox(height: 100, child: Image.file(File(photoPath!))),
+                        SizedBox(height: 100, child: ImageSourceWidget(path: photoPath)),
                         IconButton(onPressed: () => setState(() => photoPath = null), icon: const Icon(Icons.close, color: Colors.red)),
                     ],
                 )
@@ -535,12 +535,16 @@ class _MapPageState extends ConsumerState<MapPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (tree['photo_path'] != null && File(tree['photo_path']).existsSync())
-                Image.file(File(tree['photo_path']), height: 200, fit: BoxFit.cover)
-              else if (tree['photo_url'] != null)
-                Image.network(tree['photo_url'], height: 200, fit: BoxFit.cover)
-              else
-                const SizedBox(height: 200, child: Center(child: Icon(Icons.image_not_supported, size: 50))),
+              ImageSourceWidget(
+                path: tree['photo_path'] as String?,
+                url: tree['photo_url'] as String?,
+                height: 200,
+                fit: BoxFit.cover,
+                placeholder: const SizedBox(
+                  height: 200,
+                  child: Center(child: Icon(Icons.image_not_supported, size: 50)),
+                ),
+              ),
               const SizedBox(height: 16),
               Text('樹高: ${tree['height']?.toString() ?? '-'} m'),
               Text('胸高直径: ${tree['diameter']?.toString() ?? '-'} cm'),
@@ -566,10 +570,15 @@ class _MapPageState extends ConsumerState<MapPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Photo
-              if (obj.photoPath != null && File(obj.photoPath!).existsSync())
+              if (obj.photoPath != null && obj.photoPath!.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(File(obj.photoPath!), height: 150, width: double.infinity, fit: BoxFit.cover),
+                  child: ImageSourceWidget(
+                    path: obj.photoPath,
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 )
               else
                 Container(
