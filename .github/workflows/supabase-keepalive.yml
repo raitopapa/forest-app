@@ -1,0 +1,59 @@
+# Supabase Free Tier は 7 日間 inactive で project が pause、
+# 90 日続くと dashboard 復元不可になる。
+# このワークフローは 6 日ごとに REST API に軽量 ping を送り
+# inactivity カウンタをリセットする。
+#
+# 必要な GitHub Secrets:
+# - SUPABASE_URL      : https://<project_id>.supabase.co
+# - SUPABASE_ANON_KEY : anon public key (JWT)
+#
+# 設定方法:
+#   GitHub リポジトリ → Settings → Secrets and variables → Actions
+#   → New repository secret
+#
+# 手動実行も可 (workflow_dispatch)。
+
+name: Supabase Keepalive
+
+on:
+  schedule:
+    # 6 日ごと (UTC) — 7 日 inactive 制約のギリギリ手前
+    - cron: '0 0 */6 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$ANON" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY secret is not set"
+            exit 1
+          fi
+
+          echo "Pinging $URL/rest/v1/work_areas (limit=1)"
+
+          HTTP_CODE=$(curl -sf -o /tmp/body \
+            -w "%{http_code}" \
+            -H "apikey: $ANON" \
+            -H "Authorization: Bearer $ANON" \
+            "$URL/rest/v1/work_areas?select=id&limit=1" \
+            || echo "FAIL")
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body (first 200 chars):"
+          head -c 200 /tmp/body || true
+          echo ""
+
+          # 401 (RLS により空配列、認証なしなので OK 扱い) や 200 を成功とする
+          # 5xx / FAIL は失敗
+          if [ "$HTTP_CODE" = "FAIL" ] || [ "${HTTP_CODE:0:1}" = "5" ]; then
+            echo "::error::Ping failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          echo "::notice::Supabase keepalive ping OK"
