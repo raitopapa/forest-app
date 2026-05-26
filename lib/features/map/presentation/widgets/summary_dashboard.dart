@@ -25,6 +25,11 @@ class SummaryDashboard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
+      // 樹種内訳が多いときに bottom overflow するため画面高さの 75% に制限し、
+      // 超過時は内部スクロールに切り替える
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -36,9 +41,10 @@ class SummaryDashboard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // Header
           Row(
             children: [
@@ -106,7 +112,8 @@ class SummaryDashboard extends StatelessWidget {
             const SizedBox(height: 8),
             _buildSpeciesBreakdown(),
           ],
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -166,6 +173,9 @@ void showSummaryDashboard(
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
+    // bottom sheet を画面下半分の固定制約から解放し、内部 SingleChildScrollView
+    // と maxHeight 制約と組み合わせて柔軟に高さを決められるようにする
+    isScrollControlled: true,
     builder: (context) => SummaryDashboard(
       trees: trees,
       mapObjects: mapObjects,
