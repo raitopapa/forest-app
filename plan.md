@@ -4,8 +4,8 @@
 > 「目的・方針 → 現状 → 課題 → 将来」を 1 か所に集約し、他の AI / 共同開発者と共有して開発の方向性を検証するために使います。
 > **更新ルール**: 大きな PR がマージされたら「進捗」「課題」セクションを差分追記し、節目で全体を見直してください。
 
-**最終更新**: 2026-05-24
-**現在の main**: v1.3 相当（Phase 3 機能群マージ済み、未リリース）
+**最終更新**: 2026-05-26
+**現在の main**: v1.3 相当（Phase 3 機能群 + Supabase 移行マージ済み、未リリース）
 **Google Play 配信中**: v1.2 (commit 3b6a0a0、2026-01 リリース)
 
 ---
@@ -137,7 +137,7 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 
 ---
 
-## 6. 進捗 — マージ済み 25 PR の整理
+## 6. 進捗 — マージ済み 27 PR の整理
 
 ### Phase 0: 引き継ぎ整理 (2026-05-18 〜)
 - ブランチ大量削除 (master, codex, work-sync など)
@@ -174,45 +174,67 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 | #24 | Map UI レイヤー残存 `dart:io` 一掃 |
 | #25 | **PDF 写真台帳に実画像埋め込み (FileReader 抽象追加)** |
 
+### ドキュメント / インフラ (PRs #26 〜)
+
+| PR | 内容 |
+|---:|---|
+| #26 | `plan.md` 追加 + `README.md` 全面更新、`instruction2.md` 廃止 |
+| #27 | **Supabase 新プロジェクト (`iorzhydjarafdwvopjtc`) への移行 + GitHub Actions Keepalive ワークフロー** |
+
 ### 検証状況
 
-- ✅ `flutter analyze`: 0 errors, 31 issues (info のみ、既存 unused field 系)
+- ✅ `flutter analyze`: 0 errors, ~31 issues (info のみ、既存 unused field 系)
 - ✅ `flutter test test/migration_test.dart`: All 3 tests passed
-- 🟡 実機 UI スモークテスト: 進行中（本ドキュメント作成時点でエミュレータ install まで完了）
+- ✅ **Supabase 同期実機検証** (2026-05-26): auth.users / public.work_areas / public.trees / Storage photos すべて同期確認済み
+- 🟡 実機 UI スモークテスト: 主要機能完了、Phase 3 拡張機能 (Plot/Statistics/PDF) は追加確認推奨
 - ❌ Flutter Web ビルド: 未検証（バックエンド層 export/sync/backup に dart:io が残存）
 
 ---
 
 ## 7. 現在の主要課題と判断ポイント
 
-### 7.1 🔴 Supabase プロジェクト復活 (release blocker)
+### 7.1 ✅ Supabase プロジェクト復活 (完了 2026-05-26)
 
-**状況**: `raitopapa's Project` が 90 日以上 pause → ダッシュボードからの復元不可。データはバックアップ可能。
+**経緯**:
+- 旧プロジェクト `wyjyaydbchukvptlhcny` が 90 日以上 pause → 復元不可
+- backup を調査したところ `public` スキーマに forest-app の主要テーブル (`work_areas`/`trees`) が無く、`survey_points` 単独 → **クライアントは一度も Supabase 同期できていなかった** ことが判明
+- 失うデータなしと判断、新プロジェクトに **クリーン状態で再構築**
 
-**選択肢**:
+**実施内容** (PR #27 マージ):
+- 新プロジェクト `iorzhydjarafdwvopjtc` を作成 (Tokyo region, Free tier)
+- PostGIS 拡張有効化、`public.work_areas` / `public.trees` テーブル + RLS ポリシー (`auth.uid() = user_id`) 作成
+- Storage バケット `photos` (Public) + RLS ポリシー作成
+- クライアント `lib/main.dart` の URL/anonKey を新プロジェクトに差し替え
+- Authentication → Providers → Email の **Confirm email を OFF** (rate limit 回避 + 即時アクティベート)
+- `.github/workflows/supabase-keepalive.yml` を追加（6 日ごとに REST API ping、cron + 手動実行可）
 
-| 案 | 概要 | コスト | 影響 |
-|---|---|---|---|
-| **A**: 新規 Supabase プロジェクト作成 → backup restore → SUPABASE_URL/KEY 差し替え | 数時間（手作業） | 0 円 | URL/KEY 差し替えコード 1 箇所変更、既存ユーザーは再ログイン |
-| B: Firebase / Cloudflare D1 等に移行 | 数日〜数週 | 0〜小額 | SyncRepository 全書き換え、PostGIS 互換性問題 |
-| C: クラウド同期撤去（オフライン専用化） | 半日 | 0 円 | UX 後退、複数端末で共有不可。データ消失リスクあり |
+**動作確認結果** (2026-05-26 実機):
+- ✅ サインアップ → `auth.users` に user 1 件 (i007955@gmail.com)
+- ✅ 作業エリア作成 → `public.work_areas` に row 同期
+- ✅ 樹木追加 (TreeInputDialog) → `public.trees` に 2 件同期 (sugi, sugi2)
+- ✅ 写真添付 → Storage `photos` バケットに upload (63KB jpg)
 
-**Claude の推奨**: **案 A**。コストとコード変更を最小化できる。Free Tier の inactive pause リスクは継続するが、運用ルール（月 1 回 cron で touch するなど）で回避可能。
+**残り運用設定** (ユーザー作業):
+- [ ] GitHub Secrets に `SUPABASE_URL` / `SUPABASE_ANON_KEY` を登録
+- [ ] Actions タブから Keepalive workflow を手動実行 → 緑になることを確認
 
-### 7.2 🟡 実機 UI スモークテスト
+### 7.2 ✅ 実機 UI スモークテスト (主要機能完了 2026-05-26)
 
-**状況**: エミュレータに最新 main をインストール済み。動作確認はこれから。
+**確認済み** (実機エミュレータ Android 16 で確認):
+- ✅ アプリ起動 → クラッシュなし
+- ✅ 新規サインアップ → Supabase Auth 連携 OK
+- ✅ 作業エリア作成 → 一覧表示
+- ✅ 樹木追加 (TreeInputDialog で species/height/diameter/health_status 入力)
+- ✅ 写真撮影 → Supabase Storage 同期
+- ✅ summary_dashboard 表示 (※ 軽微 overflow バグあり → PR #28 で修正)
 
-**確認項目** (リリース前必須):
-- [ ] アプリ起動 → クラッシュなし
-- [ ] 作業エリア作成 → 一覧表示
-- [ ] WorkAreaList の ⋮ メニュー (Plot/Statistics/PDF) 各起動
-- [ ] 樹木追加 (TreeInputDialog 16 フィールド)
-- [ ] 地図上にプロット (円形/方形) 描画される
+**追加で確認推奨** (本人で時間がある時に):
+- [ ] WorkAreaList の ⋮ メニュー (Plot 一覧 / Statistics / PDF 出力) 各起動
+- [ ] 地図画面 FAB「プロット追加」→ 円形/方形描画
 - [ ] 統計レポート 4 タブ表示
-- [ ] PDF 出力 → 共有シート → 実写真埋め込み
-- [ ] summary_dashboard 表示
-- [ ] 既存機能 (描画ツール / GPS トラック / 写真ギャラリー) 回帰なし
+- [ ] PDF 出力 → 共有シート → 実写真が埋め込まれている
+- [ ] GPS トラック記録 / フォトギャラリー (回帰確認)
+- [ ] TreeInputDialog の Phase 3 拡張フィールド (volume/age/forestSection/vigor 等) の入力経路
 
 ### 7.3 🟢 バックエンド層 `dart:io` 残存（Web 完全対応の前提）
 
@@ -274,15 +296,20 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 
 > プロジェクトの方向性は健全だと判断します。ただし以下の論点は意識しておくことを推奨します。
 
-### 9.1 Supabase Free Tier の構造的リスク 🔴
+### 9.1 Supabase Free Tier の構造的リスク 🟡 (対応中)
 
-**論点**: 90 日 pause → 復元不可は、今回まさに直面した問題です。再発防止策が必要：
+**経緯**: 90 日 pause → 復元不可は、今回まさに直面した問題でした。
 
-- **定期 touch スクリプト**: GitHub Actions の cron で月 1 回 Supabase の REST endpoint に空 SELECT を投げて inactivity をリセット (`*/30 * * * *` の超軽量 ping）
-- **データの定期エクスポート**: 同じく cron で SQL backup を GitHub release artifact / Drive に保管
-- **将来の課金検討**: 月 $25 の Pro Tier (Free のスケール) なら inactivity 制約なし、コスト許容できる規模になったタイミングで切替
+**実施済み対策** (PR #27、2026-05-26):
+- ✅ 新プロジェクト `iorzhydjarafdwvopjtc` で再構築
+- ✅ GitHub Actions `.github/workflows/supabase-keepalive.yml` を追加（6 日ごとに REST API ping）
+- ⏸ GitHub Secrets 登録 + 疎通確認は **ユーザー作業待ち**
 
-**Claude 案**: いま無理に Pro 化する必要はない。**「自動 touch + 月次バックアップ」を CI で組む** のがコスパ最強。
+**残る論点**:
+- **定期データバックアップ**: 自動 touch だけでは「pause しない」が、データ消失 (誤操作 / インシデント) には備えていない。将来的に cron で SQL dump を GitHub release artifact / 個人 Drive に保存する仕組みが望ましい
+- **Pro Tier 切替の目安**: 月 $25 の Pro Tier なら inactivity 制約なし、Storage 100GB、daily backups。「ユーザーが他者にも広がる時点」または「ストレージが 500MB 超え」 で切替を検討
+
+**Claude 案**: 当面 keepalive で十分。**月次バックアップ workflow も追加しておくと安心**（実装は数十行）。
 
 ### 9.2 「オフライン → クラウドはオプション」を UX に明示すべき 🟡
 
