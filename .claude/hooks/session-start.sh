@@ -54,6 +54,13 @@ fi
 
 # 2. Warm the toolchain (first run unpacks the bundled Dart SDK) and install
 #    the project's pub dependencies.
+#
+# SessionStart fires on resume/clear/compact too, inheriting whatever cwd the
+# session currently has — which may not be the project root. The only pubspec
+# lives at the repo root, so move there before `flutter pub get`. Fall back to
+# resolving the root from this script's own location when run outside a hook.
+cd "${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
 flutter --version
 flutter pub get
 
