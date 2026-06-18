@@ -207,7 +207,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   workAreaId: widget.workAreaId,
                   description: description,
                 );
-            if (mounted) {
+            if (context.mounted) {
               Navigator.pop(context);
               _refreshData();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -215,7 +215,7 @@ class _MapPageState extends ConsumerState<MapPage> {
               );
             }
           } catch (e) {
-            if (mounted) {
+            if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('プロット作成エラー: $e')),
               );
@@ -423,15 +423,6 @@ class _MapPageState extends ConsumerState<MapPage> {
     }
   }
 
-  void _undoPoint() {
-    if (_drawingPoints.isNotEmpty) {
-      setState(() {
-        _drawingPoints.removeLast();
-        _updateMeasurement(_activeTool);
-      });
-    }
-  }
-
   void _cancelDrawing() {
     setState(() {
       _activeTool = DrawingToolType.none;
@@ -506,7 +497,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   notes: notes,
                   markedForThinning: markedForThinning,
                 );
-            if (mounted) {
+            if (context.mounted) {
               Navigator.pop(context);
               _refreshData();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -514,7 +505,7 @@ class _MapPageState extends ConsumerState<MapPage> {
               );
             }
           } catch (e) {
-            if (mounted) {
+            if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('エラー: $e')),
               );
@@ -643,7 +634,7 @@ class _MapPageState extends ConsumerState<MapPage> {
                   attributes: newAttrs,
                 );
                 _refreshData();
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('属性を更新しました')),
                   );
@@ -676,10 +667,11 @@ class _MapPageState extends ConsumerState<MapPage> {
                 ),
               );
               if (confirm == true) {
+                if (!context.mounted) return;
                 Navigator.pop(context); // Close details dialog
                 await ref.read(mapObjectRepositoryProvider).deleteMapObject(obj.id);
                 _refreshData();
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('削除しました')),
                   );
@@ -1039,8 +1031,8 @@ class _MapPageState extends ConsumerState<MapPage> {
             child: FloatingActionButton.small(
               heroTag: 'gps_toggle',
               backgroundColor: _isRecording ? Colors.red : Colors.white,
-              child: Icon(_isRecording ? Icons.stop : Icons.fiber_manual_record, color: _isRecording ? Colors.white : Colors.red),
               onPressed: _toggleRecording,
+              child: Icon(_isRecording ? Icons.stop : Icons.fiber_manual_record, color: _isRecording ? Colors.white : Colors.red),
             ),
           ),
 

@@ -87,7 +87,7 @@ class _WorkAreaListPageState extends ConsumerState<WorkAreaListPage> {
               await ref.read(syncRepositoryProvider).syncPush();
               await ref.read(syncRepositoryProvider).syncPull();
               _refreshWorkAreas();
-              if (mounted) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('同期完了')));
               }
             },

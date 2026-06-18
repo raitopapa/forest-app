@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -78,6 +79,9 @@ class SyncRepository {
   }
 
   /// Log a conflict.
+  ///
+  /// v1.4 の同期競合解決フローで使用予定のスキャフォールド（現状は未配線）。
+  // ignore: unused_element
   Future<void> _logConflict(SyncConflict conflict) async {
     final prefs = await SharedPreferences.getInstance();
     final existing = await getConflicts();
@@ -191,7 +195,7 @@ class SyncRepository {
               LocalTreesCompanion(photoUrl: Value(photoUrl)),
             );
           } catch (e) {
-            print('Photo upload failed: $e');
+            debugPrint('Photo upload failed: $e');
             // Continue syncing the tree data even if photo fails, or maybe retry later?
             // For now, we continue.
           }

@@ -1,24 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/database/app_database.dart';
 import '../../map/data/tree_repository.dart';
-import '../../offline/data/sync_repository.dart' show appDatabaseProvider;
 import '../../plot/data/plot_repository.dart';
 import '../domain/models/work_area_statistics.dart';
 
 final statisticsServiceProvider = Provider<StatisticsService>((ref) {
   return StatisticsService(
-    ref.watch(appDatabaseProvider),
     ref.watch(treeRepositoryProvider),
     ref.watch(plotRepositoryProvider),
   );
 });
 
 class StatisticsService {
-  final AppDatabase _db;
   final TreeRepository _treeRepo;
   final PlotRepository _plotRepo;
 
-  StatisticsService(this._db, this._treeRepo, this._plotRepo);
+  StatisticsService(this._treeRepo, this._plotRepo);
 
   /// 作業エリア全体の統計を計算
   Future<WorkAreaStatistics> calculateWorkAreaStatistics(

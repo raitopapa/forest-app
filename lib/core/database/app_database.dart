@@ -86,7 +86,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// マイグレーションテスト等で QueryExecutor を直接差し替えるための constructor。
   /// 本番コードからは呼ばないこと。
-  AppDatabase.forTesting(QueryExecutor e) : super(e);
+  AppDatabase.forTesting(super.e);
 
   @override
   int get schemaVersion => 5;

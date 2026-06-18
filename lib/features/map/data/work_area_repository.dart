@@ -1,24 +1,21 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../offline/data/sync_repository.dart';
 
 final workAreaRepositoryProvider = Provider<WorkAreaRepository>((ref) {
   return WorkAreaRepository(
-    Supabase.instance.client,
     ref.watch(appDatabaseProvider),
     ref.watch(syncRepositoryProvider),
   );
 });
 
 class WorkAreaRepository {
-  final SupabaseClient _client;
   final AppDatabase _db;
   final SyncRepository _sync;
 
-  WorkAreaRepository(this._client, this._db, this._sync);
+  WorkAreaRepository(this._db, this._sync);
 
   Future<List<Map<String, dynamic>>> getWorkAreas() async {
     // Read from local DB

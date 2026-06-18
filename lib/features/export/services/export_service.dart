@@ -209,7 +209,7 @@ class ExportService {
 
       return XFile(file.path);
     } catch (e) {
-      print('Screenshot export failed: $e');
+      debugPrint('Screenshot export failed: $e');
       return null;
     }
   }

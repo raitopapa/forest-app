@@ -121,7 +121,7 @@ class LocationGuard {
           reason: 'unsupported',
         );
       }
-      return LocationPermissionResult(
+      return const LocationPermissionResult(
         granted: false,
         reason: 'denied',
       );

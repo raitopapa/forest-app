@@ -21,7 +21,7 @@ class License {
 
   /// 無料版ライセンスを作成
   factory License.free() {
-    return License(
+    return const License(
       type: LicenseType.free,
       isActive: true,
       features: {

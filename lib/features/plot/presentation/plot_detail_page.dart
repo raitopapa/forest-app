@@ -240,11 +240,11 @@ class _PlotDetailPageState extends ConsumerState<PlotDetailPage> {
               ),
               child: Column(
                 children: [
-                  Row(
+                  const Row(
                     children: [
-                      const Icon(Icons.auto_graph, size: 20, color: Colors.amber),
-                      const SizedBox(width: 8),
-                      const Text(
+                      Icon(Icons.auto_graph, size: 20, color: Colors.amber),
+                      SizedBox(width: 8),
+                      Text(
                         'ヘクタール当たり',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),

@@ -183,14 +183,15 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 | #28 | summary_dashboard の軽微 overflow 修正 + plan.md リフレッシュ |
 | #29 | Claude Code on the web 用 SessionStart hook（Flutter SDK 3.38.4 自動インストール + `pub get`） |
 | – | **月次 Supabase バックアップ workflow `.github/workflows/supabase-backup.yml`**（roles/schema/data の SQL ダンプ → Artifact + Release 保存） |
+| – | **`flutter analyze` を 0 issues 化**（31 件の info/warning を解消）＋ **`flutter build web` 成功を検証**（Web ビルド blocker の前提が誤りと判明） |
 
 ### 検証状況
 
-- ✅ `flutter analyze`: 0 errors, ~31 issues (info のみ、既存 unused field 系)
+- ✅ `flutter analyze`: **No issues found**（2026-06-18 に残 31 件の info/warning をすべて解消）
 - ✅ `flutter test test/migration_test.dart`: All 3 tests passed
 - ✅ **Supabase 同期実機検証** (2026-05-26): auth.users / public.work_areas / public.trees / Storage photos すべて同期確認済み
 - 🟡 実機 UI スモークテスト: 主要機能完了、Phase 3 拡張機能 (Plot/Statistics/PDF) は追加確認推奨
-- ❌ Flutter Web ビルド: 未検証（バックエンド層 export/sync/backup に dart:io が残存）
+- ✅ **Flutter Web ビルド: `flutter build web` 成功**（2026-06-18 検証）。`dart:io` の import 自体はコンパイルを妨げない。残課題は **ランタイム**（export/sync/backup の dart:io 実行パスは web 実行時に失敗しうる）→ 7.3 参照
 
 ---
 
@@ -239,7 +240,9 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 - [ ] GPS トラック記録 / フォトギャラリー (回帰確認)
 - [ ] TreeInputDialog の Phase 3 拡張フィールド (volume/age/forestSection/vigor 等) の入力経路
 
-### 7.3 🟢 バックエンド層 `dart:io` 残存（Web 完全対応の前提）
+### 7.3 🟢 バックエンド層 `dart:io` 残存（Web **ランタイム**動作の前提）
+
+**前提の訂正 (2026-06-18)**: 当初「dart:io が残ると Web ビルドが通らない」と整理していたが、実際には `flutter build web` は成功する（import はコンパイルを妨げない）。よって以下はビルド blocker ではなく、**web 実行時に該当機能を呼んだ際の失敗を防ぐためのランタイム対応**。
 
 | ファイル | 用途 | 対応規模 |
 |---|---|---|
@@ -247,7 +250,7 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 | `sync_repository.dart` | 写真 upload | 中 (XFile.bytes 経由化) |
 | `backup_service.dart` | ローカルバックアップファイル操作 | 大 (Web 概念再設計) |
 
-リリース blocker ではなく、Flutter Web ビルドを通したい時の前提条件。
+リリース blocker ではなく、Web で export/sync/backup を実際に使えるようにしたい時の前提条件。ヘッドレスでは検証しづらく、実機 web での動作確認が要る領域。
 
 ### 7.4 🟢 PDF / Statistics 内容のドメイン検証
 

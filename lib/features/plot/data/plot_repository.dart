@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../../offline/data/sync_repository.dart';
@@ -8,18 +7,16 @@ import '../domain/models/plot.dart';
 
 final plotRepositoryProvider = Provider<PlotRepository>((ref) {
   return PlotRepository(
-    Supabase.instance.client,
     ref.watch(appDatabaseProvider),
     ref.watch(syncRepositoryProvider),
   );
 });
 
 class PlotRepository {
-  final SupabaseClient _client;
   final AppDatabase _db;
   final SyncRepository _sync;
 
-  PlotRepository(this._client, this._db, this._sync);
+  PlotRepository(this._db, this._sync);
 
   /// プロット一覧を取得
   Future<List<Plot>> getPlots(String workAreaId) async {

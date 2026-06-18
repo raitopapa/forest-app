@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -62,7 +63,7 @@ class BackupService {
 
       return backupFile;
     } catch (e) {
-      print('Backup failed: $e');
+      debugPrint('Backup failed: $e');
       return null;
     }
   }
@@ -88,7 +89,7 @@ class BackupService {
 
       return true;
     } catch (e) {
-      print('Restore failed: $e');
+      debugPrint('Restore failed: $e');
       return false;
     }
   }
@@ -135,7 +136,7 @@ class BackupService {
       }
       return false;
     } catch (e) {
-      print('Delete backup failed: $e');
+      debugPrint('Delete backup failed: $e');
       return false;
     }
   }
