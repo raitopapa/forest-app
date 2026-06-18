@@ -4,7 +4,7 @@
 > 「目的・方針 → 現状 → 課題 → 将来」を 1 か所に集約し、他の AI / 共同開発者と共有して開発の方向性を検証するために使います。
 > **更新ルール**: 大きな PR がマージされたら「進捗」「課題」セクションを差分追記し、節目で全体を見直してください。
 
-**最終更新**: 2026-05-26
+**最終更新**: 2026-06-18
 **現在の main**: v1.3 相当（Phase 3 機能群 + Supabase 移行マージ済み、未リリース）
 **Google Play 配信中**: v1.2 (commit 3b6a0a0、2026-01 リリース)
 
@@ -180,6 +180,9 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 |---:|---|
 | #26 | `plan.md` 追加 + `README.md` 全面更新、`instruction2.md` 廃止 |
 | #27 | **Supabase 新プロジェクト (`iorzhydjarafdwvopjtc`) への移行 + GitHub Actions Keepalive ワークフロー** |
+| #28 | summary_dashboard の軽微 overflow 修正 + plan.md リフレッシュ |
+| #29 | Claude Code on the web 用 SessionStart hook（Flutter SDK 3.38.4 自動インストール + `pub get`） |
+| – | **月次 Supabase バックアップ workflow `.github/workflows/supabase-backup.yml`**（roles/schema/data の SQL ダンプ → Artifact + Release 保存） |
 
 ### 検証状況
 
@@ -305,11 +308,15 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 - ✅ GitHub Actions `.github/workflows/supabase-keepalive.yml` を追加（6 日ごとに REST API ping）
 - ⏸ GitHub Secrets 登録 + 疎通確認は **ユーザー作業待ち**
 
+**実施済み対策** (2026-06-18):
+- ✅ **月次バックアップ workflow `.github/workflows/supabase-backup.yml` を追加**（毎月 1 日に Supabase CLI で roles/schema/data を SQL ダンプ → ワークフロー Artifact 90 日 + GitHub Release 恒久保存。手動実行可）。データ消失（誤操作/インシデント）に備える
+- ⏸ 新規 Secret `SUPABASE_DB_URL`（Session pooler 接続文字列）の登録 + 手動実行での疎通確認は **ユーザー作業待ち**
+
 **残る論点**:
-- **定期データバックアップ**: 自動 touch だけでは「pause しない」が、データ消失 (誤操作 / インシデント) には備えていない。将来的に cron で SQL dump を GitHub release artifact / 個人 Drive に保存する仕組みが望ましい
+- **Storage / auth のバックアップ**: SQL ダンプは public スキーマ（work_areas/trees 等）が対象。Storage の写真ファイルと `auth.users` は別系統のため、必要になれば別途バックアップ手段を検討
 - **Pro Tier 切替の目安**: 月 $25 の Pro Tier なら inactivity 制約なし、Storage 100GB、daily backups。「ユーザーが他者にも広がる時点」または「ストレージが 500MB 超え」 で切替を検討
 
-**Claude 案**: 当面 keepalive で十分。**月次バックアップ workflow も追加しておくと安心**（実装は数十行）。
+**Claude 案**: keepalive（pause 防止）+ 月次 SQL ダンプ（データ保全）で当面の Free Tier リスクはカバー済み。次の懸念は Storage 写真の保全だが、現状データ量では優先度低。
 
 ### 9.2 「オフライン → クラウドはオプション」を UX に明示すべき 🟡
 

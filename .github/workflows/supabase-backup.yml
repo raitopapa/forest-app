@@ -1,0 +1,103 @@
+# Supabase の本番 DB を月次でダンプし、復旧用バックアップとして保存するワークフロー。
+#
+# keepalive (supabase-keepalive.yml) は project の pause を防ぐだけで、
+# 誤操作 / インシデントによる *データ消失* には備えていない。
+# このワークフローは毎月 1 回、roles / schema / data の SQL ダンプを取得し、
+#   1. ワークフロー Artifact (90 日保持)  — すぐ DL したい時用
+#   2. GitHub Release (恒久保持, prerelease タグ) — 長期保管用
+# の 2 か所に保存する。手動実行 (workflow_dispatch) も可。
+#
+# 必要な GitHub Secrets:
+# - SUPABASE_DB_URL : Postgres 接続文字列 (Session pooler を推奨)
+#     Supabase Dashboard → Project Settings → Database
+#       → Connection string → "Session pooler" の URI をコピーし、
+#         [YOUR-PASSWORD] を実際の DB パスワードに置換する。
+#     例: postgresql://postgres.iorzhydjarafdwvopjtc:<PASSWORD>@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres
+#     ※ Session pooler は IPv4 対応かつ pg_dump 互換。
+#        Transaction pooler (:6543) は pg_dump 非対応なので使わないこと。
+#
+# 復元方法 (例):
+#   tar xzf supabase-backup-YYYY-MM-DD.tar.gz
+#   psql "$SUPABASE_DB_URL" -f supabase-backup-YYYY-MM-DD/roles.sql
+#   psql "$SUPABASE_DB_URL" -f supabase-backup-YYYY-MM-DD/schema.sql
+#   psql "$SUPABASE_DB_URL" -f supabase-backup-YYYY-MM-DD/data.sql
+#
+# 注意: この SQL ダンプは public スキーマ (work_areas / trees 等) が対象。
+#       Storage の写真ファイルと auth.users は含まれない (必要なら別途バックアップ)。
+
+name: Supabase Monthly Backup
+
+on:
+  schedule:
+    # 毎月 1 日 18:00 UTC (= 翌 03:00 JST)
+    - cron: '0 18 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write # GitHub Release の作成に必要
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Dump database (roles + schema + data)
+        id: dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+
+          stamp="$(date -u +%Y-%m-%d)"
+          outdir="supabase-backup-${stamp}"
+          mkdir -p "$outdir"
+
+          echo "Dumping roles..."
+          supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f "$outdir/roles.sql"
+          echo "Dumping schema..."
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "$outdir/schema.sql"
+          echo "Dumping data..."
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f "$outdir/data.sql"
+
+          archive="${outdir}.tar.gz"
+          tar -czf "$archive" "$outdir"
+
+          ls -lh "$archive"
+          echo "stamp=${stamp}" >> "$GITHUB_OUTPUT"
+          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Supabase backup created: ${archive}"
+
+      - name: Upload workflow artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ steps.dump.outputs.stamp }}
+          path: ${{ steps.dump.outputs.archive }}
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Publish as GitHub Release (long-term retention)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="db-backup-${{ steps.dump.outputs.stamp }}"
+          archive="${{ steps.dump.outputs.archive }}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # 同日再実行: 既存リリースに上書きアップロード
+            gh release upload "$tag" "$archive" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" "$archive" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Supabase backup ${{ steps.dump.outputs.stamp }}" \
+              --notes "Automated monthly Supabase database dump (roles + schema + data)." \
+              --prerelease
+          fi
+          echo "::notice::Published release ${tag}"
