@@ -4,7 +4,7 @@
 > 「目的・方針 → 現状 → 課題 → 将来」を 1 か所に集約し、他の AI / 共同開発者と共有して開発の方向性を検証するために使います。
 > **更新ルール**: 大きな PR がマージされたら「進捗」「課題」セクションを差分追記し、節目で全体を見直してください。
 
-**最終更新**: 2026-05-26
+**最終更新**: 2026-06-18
 **現在の main**: v1.3 相当（Phase 3 機能群 + Supabase 移行マージ済み、未リリース）
 **Google Play 配信中**: v1.2 (commit 3b6a0a0、2026-01 リリース)
 
@@ -180,14 +180,19 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 |---:|---|
 | #26 | `plan.md` 追加 + `README.md` 全面更新、`instruction2.md` 廃止 |
 | #27 | **Supabase 新プロジェクト (`iorzhydjarafdwvopjtc`) への移行 + GitHub Actions Keepalive ワークフロー** |
+| #28 | summary_dashboard の軽微 overflow 修正 + plan.md リフレッシュ |
+| #29 | Claude Code on the web 用 SessionStart hook（Flutter SDK 3.38.4 自動インストール + `pub get`） |
+| – | **月次 Supabase バックアップ workflow `.github/workflows/supabase-backup.yml`**（roles/schema/data の SQL ダンプ → Artifact + Release 保存） |
+| – | **`flutter analyze` を 0 issues 化**（31 件の info/warning を解消）＋ **`flutter build web` 成功を検証**（Web ビルド blocker の前提が誤りと判明） |
+| – | **Flutter CI workflow `.github/workflows/flutter-ci.yml`**（PR / main push で `flutter analyze --fatal-infos` + `flutter test`。10.1 の必須チェックを自動化） |
 
 ### 検証状況
 
-- ✅ `flutter analyze`: 0 errors, ~31 issues (info のみ、既存 unused field 系)
+- ✅ `flutter analyze`: **No issues found**（2026-06-18 に残 31 件の info/warning をすべて解消）
 - ✅ `flutter test test/migration_test.dart`: All 3 tests passed
 - ✅ **Supabase 同期実機検証** (2026-05-26): auth.users / public.work_areas / public.trees / Storage photos すべて同期確認済み
 - 🟡 実機 UI スモークテスト: 主要機能完了、Phase 3 拡張機能 (Plot/Statistics/PDF) は追加確認推奨
-- ❌ Flutter Web ビルド: 未検証（バックエンド層 export/sync/backup に dart:io が残存）
+- ✅ **Flutter Web ビルド: `flutter build web` 成功**（2026-06-18 検証）。`dart:io` の import 自体はコンパイルを妨げない。残課題は **ランタイム**（export/sync/backup の dart:io 実行パスは web 実行時に失敗しうる）→ 7.3 参照
 
 ---
 
@@ -236,7 +241,9 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 - [ ] GPS トラック記録 / フォトギャラリー (回帰確認)
 - [ ] TreeInputDialog の Phase 3 拡張フィールド (volume/age/forestSection/vigor 等) の入力経路
 
-### 7.3 🟢 バックエンド層 `dart:io` 残存（Web 完全対応の前提）
+### 7.3 🟢 バックエンド層 `dart:io` 残存（Web **ランタイム**動作の前提）
+
+**前提の訂正 (2026-06-18)**: 当初「dart:io が残ると Web ビルドが通らない」と整理していたが、実際には `flutter build web` は成功する（import はコンパイルを妨げない）。よって以下はビルド blocker ではなく、**web 実行時に該当機能を呼んだ際の失敗を防ぐためのランタイム対応**。
 
 | ファイル | 用途 | 対応規模 |
 |---|---|---|
@@ -244,7 +251,7 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 | `sync_repository.dart` | 写真 upload | 中 (XFile.bytes 経由化) |
 | `backup_service.dart` | ローカルバックアップファイル操作 | 大 (Web 概念再設計) |
 
-リリース blocker ではなく、Flutter Web ビルドを通したい時の前提条件。
+リリース blocker ではなく、Web で export/sync/backup を実際に使えるようにしたい時の前提条件。ヘッドレスでは検証しづらく、実機 web での動作確認が要る領域。
 
 ### 7.4 🟢 PDF / Statistics 内容のドメイン検証
 
@@ -305,11 +312,15 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 - ✅ GitHub Actions `.github/workflows/supabase-keepalive.yml` を追加（6 日ごとに REST API ping）
 - ⏸ GitHub Secrets 登録 + 疎通確認は **ユーザー作業待ち**
 
+**実施済み対策** (2026-06-18):
+- ✅ **月次バックアップ workflow `.github/workflows/supabase-backup.yml` を追加**（毎月 1 日に Supabase CLI で roles/schema/data を SQL ダンプ → ワークフロー Artifact 90 日 + GitHub Release 恒久保存。手動実行可）。データ消失（誤操作/インシデント）に備える
+- ⏸ 新規 Secret `SUPABASE_DB_URL`（Session pooler 接続文字列）の登録 + 手動実行での疎通確認は **ユーザー作業待ち**
+
 **残る論点**:
-- **定期データバックアップ**: 自動 touch だけでは「pause しない」が、データ消失 (誤操作 / インシデント) には備えていない。将来的に cron で SQL dump を GitHub release artifact / 個人 Drive に保存する仕組みが望ましい
+- **Storage / auth のバックアップ**: SQL ダンプは public スキーマ（work_areas/trees 等）が対象。Storage の写真ファイルと `auth.users` は別系統のため、必要になれば別途バックアップ手段を検討
 - **Pro Tier 切替の目安**: 月 $25 の Pro Tier なら inactivity 制約なし、Storage 100GB、daily backups。「ユーザーが他者にも広がる時点」または「ストレージが 500MB 超え」 で切替を検討
 
-**Claude 案**: 当面 keepalive で十分。**月次バックアップ workflow も追加しておくと安心**（実装は数十行）。
+**Claude 案**: keepalive（pause 防止）+ 月次 SQL ダンプ（データ保全）で当面の Free Tier リスクはカバー済み。次の懸念は Storage 写真の保全だが、現状データ量では優先度低。
 
 ### 9.2 「オフライン → クラウドはオプション」を UX に明示すべき 🟡
 

@@ -18,11 +18,11 @@ class FeedbackService {
 
   /// フィードバック用のメール下書きを起動する。
   ///
-  /// 成功時は true、失敗時は false を返す。失敗時は [Share.share] による
+  /// 成功時は true、失敗時は false を返す。失敗時は share_plus による
   /// フォールバックを自動的に試す。
   Future<bool> sendFeedback({String? subjectPrefix}) async {
     final diagnostics = await _collectDiagnostics();
-    final subject = '${subjectPrefix ?? '【森林管理アプリ】お問い合わせ'}';
+    final subject = subjectPrefix ?? '【森林管理アプリ】お問い合わせ';
     final body = _buildBody(diagnostics);
 
     final mailtoUri = Uri(

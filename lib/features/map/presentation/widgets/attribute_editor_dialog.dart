@@ -250,7 +250,6 @@ class _AttributeEditorDialogState extends State<_AttributeEditorDialog> {
           ),
         );
       case AttributeType.text:
-      default:
         return TextField(
           decoration: const InputDecoration(hintText: '値', isDense: true),
           controller: TextEditingController(text: attr.value?.toString() ?? ''),
