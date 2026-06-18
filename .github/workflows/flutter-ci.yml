@@ -1,0 +1,43 @@
+# Pull Request / main への push 時に Flutter の静的解析とテストを実行する CI。
+#
+# SessionStart hook (.claude/hooks/session-start.sh) が web セッションで保証している
+# toolchain（Flutter 3.38.4 stable）を、マージ前のゲートとしても適用する。
+# plan.md 10.1 の「各 PR で flutter analyze 0 / migration test pass を必須」を自動化する。
+#
+# analyze は --fatal-infos / --fatal-warnings を付け、info を含め 1 件でも検出されたら
+# 失敗させる（2026-06-18 に 0 issues 化した状態を維持するため）。
+
+name: Flutter CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同一ブランチで新しい push があれば古い実行をキャンセル
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.38.4
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze (fail on any issue)
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Run tests
+        run: flutter test

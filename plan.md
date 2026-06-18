@@ -184,6 +184,7 @@ Web ビルド対応のため、Step 1 〜直近の改善で以下を導入：
 | #29 | Claude Code on the web 用 SessionStart hook（Flutter SDK 3.38.4 自動インストール + `pub get`） |
 | – | **月次 Supabase バックアップ workflow `.github/workflows/supabase-backup.yml`**（roles/schema/data の SQL ダンプ → Artifact + Release 保存） |
 | – | **`flutter analyze` を 0 issues 化**（31 件の info/warning を解消）＋ **`flutter build web` 成功を検証**（Web ビルド blocker の前提が誤りと判明） |
+| – | **Flutter CI workflow `.github/workflows/flutter-ci.yml`**（PR / main push で `flutter analyze --fatal-infos` + `flutter test`。10.1 の必須チェックを自動化） |
 
 ### 検証状況
 
