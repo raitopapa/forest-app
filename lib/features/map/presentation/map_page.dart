@@ -42,6 +42,10 @@ class _MapPageState extends ConsumerState<MapPage> {
   List<MapObject> _mapObjects = [];
   List<Plot> _plots = [];
   
+  /// GPS も既存データも取得できない場合の初期表示位置。
+  /// 東京の街中ではなく森林域（奥多摩付近）。必要に応じて調整可。
+  static const LatLng _kFallbackForestCenter = LatLng(35.7853, 139.0334);
+
   // UI State
   MapLayerType _currentLayerType = MapLayerType.standard;
   DrawingToolType _activeTool = DrawingToolType.none;
@@ -67,7 +71,13 @@ class _MapPageState extends ConsumerState<MapPage> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    _refreshData();
+    _refreshData().then((_) {
+      if (!mounted) return;
+      // 地図が 1 フレーム描画された後に初期カメラ位置を決める
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _setInitialCamera();
+      });
+    });
     // Setup GPS Listener
     final trackService = ref.read(trackRecorderServiceProvider);
     _trackSubscription = trackService.trackStream.listen((track) {
@@ -116,6 +126,73 @@ class _MapPageState extends ConsumerState<MapPage> {
           SnackBar(content: Text('位置取得エラー: $e')),
         );
       }
+    }
+  }
+
+  /// 起動時のカメラ位置を決める。優先順位:
+  /// 1) このエリアに既存データ(樹木/プロット)があればその範囲にフィット
+  /// 2) 無ければ GPS 現在地
+  /// 3) どちらも取れなければ森林フォールバック(initialCenter のまま)
+  Future<void> _setInitialCamera() async {
+    final points = <LatLng>[];
+    for (final tree in _trees) {
+      final ll = _parsePointWkt(tree['location'] as String?);
+      if (ll != null) points.add(ll);
+    }
+    for (final plot in _plots) {
+      points.add(LatLng(plot.centerLat, plot.centerLng));
+    }
+
+    if (points.isNotEmpty) {
+      if (points.length == 1) {
+        _mapController.move(points.first, 17);
+      } else {
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(points),
+            padding: const EdgeInsets.all(48),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 空のエリア → GPS 現在地（取得できれば）
+    final gps = await _tryGetCurrentLatLng();
+    if (gps != null && mounted) {
+      setState(() => _currentLocation = gps);
+      _mapController.move(gps, 16);
+    }
+  }
+
+  /// WKT "POINT(lng lat)" → LatLng（パース失敗時は null）
+  LatLng? _parsePointWkt(String? wkt) {
+    if (wkt == null || !wkt.startsWith('POINT(')) return null;
+    try {
+      final coords = wkt.substring(6, wkt.length - 1).split(' ');
+      return LatLng(double.parse(coords[1]), double.parse(coords[0]));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// GPS 現在地を静かに取得する（権限が無ければ null。スナックバーは出さない）
+  Future<LatLng?> _tryGetCurrentLatLng() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -857,7 +934,7 @@ class _MapPageState extends ConsumerState<MapPage> {
             child: FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(35.6812, 139.7671),
+              initialCenter: _kFallbackForestCenter,
               initialZoom: 15.0,
               onTap: _handleMapTap,
             ),
@@ -1014,10 +1091,10 @@ class _MapPageState extends ConsumerState<MapPage> {
             ],
           ),
           ), // End RepaintBoundary
-          // Layer Selector
+          // Layer Selector（左上。右側は GPS ボタン群があるため分離して見つけやすく）
           Positioned(
             top: 16,
-            right: 16,
+            left: 16,
             child: MapLayerSelector(
               currentLayer: _currentLayerType,
               onLayerChanged: (type) => setState(() => _currentLayerType = type),
