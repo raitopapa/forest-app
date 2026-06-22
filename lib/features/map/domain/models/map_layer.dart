@@ -1,6 +1,7 @@
 enum MapLayerType {
   standard,
   satellite,
+  terrain,
   topo,
 }
 
@@ -27,6 +28,13 @@ class MapLayer {
     attribution: '出典: 国土地理院',
   );
 
+  /// 地理院「標準地図」: 等高線・地名・道路入りの地形図。
+  static const MapLayer terrain = MapLayer(
+    name: '地形図/等高線 (地理院)',
+    urlTemplate: 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+    attribution: '出典: 国土地理院',
+  );
+
   static const MapLayer topo = MapLayer(
     name: '色別標高図 (地理院)',
     urlTemplate: 'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',
@@ -39,6 +47,8 @@ class MapLayer {
         return standard;
       case MapLayerType.satellite:
         return satellite;
+      case MapLayerType.terrain:
+        return terrain;
       case MapLayerType.topo:
         return topo;
     }
